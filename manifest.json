@@ -1,0 +1,16 @@
+{
+  "name": "乳がん TNM分類・治療方針",
+  "short_name": "TNM-PFS",
+  "description": "AJCC 8th準拠のTNM分類と、5年PFSエビデンス（一次資料検証済み）を提示するツール",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1a5fa8",
+  "lang": "ja",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

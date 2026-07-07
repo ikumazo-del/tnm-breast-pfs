@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>乳がん TNM分類・治療方針</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#1a5fa8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="乳がんTNM">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#f0f2f5;font-family:'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif;}
+input[type=range]{height:4px;}
+input[type=text]:focus,input[type=number]:focus{border-color:#1a5fa8!important;outline:none;}
+@keyframes barGrow{from{width:0}to{width:var(--bar-w)}}
+.pfs-bar{animation:barGrow 0.6s ease forwards;}
+@media print{
+  .no-print{display:none!important;}
+  body{background:#fff;}
+  #print-area{max-width:100%;box-shadow:none;padding:20px;}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ── TNM data ──
+const T_ITEMS = ["T0","Tis","T1","T2","T3","T4"];
+const N_ITEMS = ["N0","N1mi","N1","N2","N3"];
+const M_ITEMS = ["M0","M1"];
+const T_DESC = {
+  T0:"原発巣の証拠なし", Tis:"非浸潤癌（DCIS）または Paget 病（浸潤なし）",
+  T1:"最大径 ≤ 20 mm（T1mi ≤1 / T1a ≤5 / T1b ≤10 / T1c ≤20 mm）",
+  T2:"最大径 > 20 mm、≤ 50 mm", T3:"最大径 > 50 mm",
+  T4:"胸壁または皮膚への浸潤（腫瘍径に関わらずT4）",
+};
+const T4_SUB_DESC = {
+  T4a:"胸壁への浸潤（肋骨・肋間筋・前鋸筋への固定）",
+  T4b:"皮膚浮腫（peau d'orange）・皮膚潰瘍・同側皮膚衛星結節",
+  T4c:"T4a＋T4bの両方を満たす",
+  T4d:"炎症性乳がん（発赤・浮腫が皮膚の1/3以上）",
+};
+const N_DESC = {
+  N0:"リンパ節転移なし", N1mi:"微小転移（> 0.2 mm かつ ≤ 2 mm）",
+  N1:"同側レベルⅠ・Ⅱ腋窩リンパ節転移（可動性あり）",
+  N2:"同側レベルⅠ・Ⅱ腋窩リンパ節 固定・融合、または内胸リンパ節転移",
+  N3:"鎖骨下（レベルⅢ）・鎖骨上、または内乳＋腋窩リンパ節転移",
+};
+const M_DESC = { M0:"遠隔転移なし", M1:"遠隔転移あり" };
+
+const STAGE_COLOR = {
+  "0":"#1a7a4a","IA":"#155090","IB":"#1a5fa8",
+  "IIA":"#8a5000","IIB":"#a04000",
+  "IIIA":"#b03000","IIIB":"#a02000","IIIC":"#880000","IV":"#6a0000",
+};
+
+// ── 5年PFSデータ ──────────────────────────────────────────────────────
+// 凡例: type="trial"→試験直接値, type="est"→推定値
+// 主要ソース:
+//   HR+/HER2-: ATAC, BIG1-98, monarchE(5y iDFS 83.6%/76.0%), POTENT(5y iDFS 87%/82%; 孫引き)
+//   HER2+: APT(5y iDFS 96.3%), APHINITY(6y iDFS 91%/88%; N+ 88%/83% HP/placebo), KATHERINE(7y iDFS 80.8%/67.1%)
+//   TNBC: KEYNOTE-522(5y EFS 81.3%/72.3%; pCR 92.2%/88.2%; non-pCR 62.6%/52.3%), CREATE-X(5y DFS 69.8%), OlympiA(3y iDFS 85.9%/77.1%)
+const PFS_DATA = {
+  "HR+/HER2-": {
+    "0": [
+      { label:"温存手術 ＋ 放射線 ＋ タモキシフェン/AI（5年）", pfs:96, type:"est", source:"NSABP B-24, IBIS-II参照" },
+      { label:"温存手術 ＋ 放射線のみ（ET無し）", pfs:89, type:"est", source:"NSABP B-17参照" },
+      { label:"全摘手術 ＋ ET（5年）", pfs:94, type:"est", source:"SEER・メタ解析参照" },
+    ],
+    "IA": [
+      { label:"手術 ＋ AI（アロマターゼ阻害薬）5年", pfs:96, type:"est", source:"ATAC/BIG1-98 Stage I亜群推定" },
+      { label:"手術 ＋ タモキシフェン 5年", pfs:93, type:"est", source:"ATAC/BIG1-98 対照群推定" },
+      { label:"手術のみ（ET無し）", pfs:84, type:"est", source:"SEER統計参照" },
+    ],
+    "IB": [
+      { label:"手術 ＋ AI 5年", pfs:93, type:"est", source:"ATAC/BIG1-98 Stage I-IIA中間推定" },
+      { label:"手術 ＋ タモキシフェン 5年", pfs:90, type:"est", source:"参照試験より推定" },
+      { label:"手術のみ", pfs:81, type:"est", source:"SEER統計推定" },
+    ],
+    "IIA": [
+      { label:"手術 ＋ AI（アロマターゼ阻害薬）5年", pfs:90, type:"est", source:"ATAC/BIG1-98全体解析より調整" },
+      { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:89, type:"est", source:"EBCTCG 2018メタ解析参照" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）" },
+      { label:"手術 ＋ タモキシフェン 5年", pfs:87, type:"est", source:"ATAC/BIG1-98対照群調整" },
+    ],
+    "IIB": [
+      { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:83, type:"est", source:"EBCTCG / SEER統計調整" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET, HR 0.680）" },
+      { label:"手術 ＋ ET単独（monarchE対照群相当）", pfs:76.0, type:"trial", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 76.0%（ET単独）" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"trial", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（孫引き）" },
+    ],
+    "IIIA": [
+      { label:"化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:83, type:"est", source:"Rastogi, monarchE, JCO 2024 ITT 83.6%基準・Stage IIIA推定" },
+      { label:"化学療法 ＋ 手術 ＋ ET（monarchE対照）", pfs:75, type:"est", source:"Rastogi, monarchE, JCO 2024 ITT 76.0%基準・Stage IIIA推定" },
+      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%基準（孫引き）・高Stage推定" },
+    ],
+    "IIIB": [
+      { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:70, type:"est", source:"monarchE+SEER Stage IIIB調整推定" },
+      { label:"術前化学療法 ＋ 手術 ＋ ET", pfs:61, type:"est", source:"SEER統計 Stage IIIB HR+推定" },
+    ],
+    "IIIC": [
+      { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:62, type:"est", source:"Stage IIIC推定（試験エビデンス限定的）" },
+      { label:"術前化学療法 ＋ 手術 ＋ ET", pfs:54, type:"est", source:"SEER統計 Stage IIIC HR+推定" },
+    ],
+  },
+  "HER2+": {
+    "IA": [
+      { label:"パクリタキセル ＋ トラスツズマブ（APT試験）", pfs:96.3, type:"trial", source:"Tolaney, APT, JCO 2019 Fig2A ITT 5y iDFS 96.3%（95%CI 94.4-98.2）" },
+      { label:"標準化学療法 ＋ トラスツズマブ ＋ ペルツズマブ", pfs:95, type:"est", source:"Piccart, APHINITY, JCO 2021 全体6y iDFS 91% + Stage IA推定" },
+    ],
+    "IB": [
+      { label:"化学療法 ＋ トラスツズマブ（1年）", pfs:91, type:"est", source:"APT/HERA参照 Stage IB推定" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ（APHINITY）", pfs:93, type:"est", source:"APHINITY全体 6y 90.6%→Stage IB調整" },
+    ],
+    "IIA": [
+      { label:"化学療法 ＋ トラスツズマブ（1年）", pfs:86, type:"est", source:"HERA試験 Stage II相当 5y 76%（全Stage）→調整" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ（APHINITY）", pfs:89, type:"est", source:"APHINITY全体 6y 90.6%（主にStage II中心）" },
+    ],
+    "IIB": [
+      { label:"化学療法 ＋ トラスツズマブ（1年）", pfs:82, type:"est", source:"HERA/APHINITY Stage IIB相当推定" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ（APHINITY N+）", pfs:88, type:"trial", source:"Piccart, APHINITY, JCO 2021 N+ 6y iDFS 88%（HP）/83%（placebo）" },
+      { label:"術前HP→pCR→トラスツズマブ継続", pfs:91, type:"est", source:"pCR達成後の予後良好推定（NeoSphere参照）" },
+      { label:"術前HP→non-pCR→T-DM1（KATHERINE）", pfs:80.8, type:"trial", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%（T-DM1, ITT）｜参考: 残存≤1cm・N0 85.7%, IHC3+ 82.8%" },
+      { label:"術前HP→non-pCR→トラスツズマブ継続", pfs:67.1, type:"trial", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 67.1%（トラスツズマブ, ITT）｜参考: 残存≤1cm・N0 76.7%, IHC3+ 66.5%" },
+    ],
+    "IIIA": [
+      { label:"術前HP＋化学療法→pCR→トラスツズマブ継続", pfs:87, type:"est", source:"NeoSphere/TRYPHAENA pCR群 + KATHRINE pCR推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1（KATHERINE）", pfs:80.8, type:"trial", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%（T-DM1, ITT）" },
+      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ継続", pfs:67.1, type:"trial", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 67.1%（トラスツズマブ, ITT）" },
+    ],
+    "IIIB": [
+      { label:"術前HP＋化学療法→pCR→継続", pfs:76, type:"est", source:"Stage IIIB pCR推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1", pfs:70, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%基準・Stage IIIB推定" },
+    ],
+    "IIIC": [
+      { label:"術前HP＋化学療法→pCR→継続", pfs:65, type:"est", source:"Stage IIIC pCR推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1", pfs:58, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%基準・Stage IIIC推定" },
+    ],
+  },
+  "HR+/HER2+": {
+    "IA": [
+      { label:"パクリタキセル ＋ トラスツズマブ（APT参照）", pfs:93, type:"est", source:"Tolaney, APT, JCO 2019 5y iDFS 96.3%参照（HR+/HER2+調整）" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ ＋ ET", pfs:95, type:"est", source:"APHINITY+ET Stage IA推定" },
+    ],
+    "IIA": [
+      { label:"化学療法 ＋ トラスツズマブ ＋ ET", pfs:86, type:"est", source:"HERA Stage II相当 + ET追加効果" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ ＋ ET（APHINITY）", pfs:89, type:"est", source:"APHINITY 6y 90.6% + ET推定" },
+    ],
+    "IIB": [
+      { label:"化学療法 ＋ トラスツズマブ ＋ ET", pfs:82, type:"est", source:"HERA Stage IIB推定 + ET" },
+      { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ ＋ ET（APHINITY N+）", pfs:88, type:"est", source:"Piccart, APHINITY, JCO 2021 N+ 6y 88%(HP) + ET推定" },
+      { label:"術前HP→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:84, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%基準 + ET推定" },
+    ],
+    "IIIA": [
+      { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:88, type:"est", source:"pCR達成 + 内分泌療法追加効果推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:82, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y 80.8%基準 T-DM1 + ET推定" },
+      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ＋ET", pfs:68, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y 67.1%基準 対照 + ET推定" },
+    ],
+    "IIIB": [
+      { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:77, type:"est", source:"Stage IIIB pCR推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:71, type:"est", source:"KATHERINE Stage IIIB推定" },
+    ],
+    "IIIC": [
+      { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:65, type:"est", source:"Stage IIIC推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:59, type:"est", source:"KATHERINE Stage IIIC推定" },
+    ],
+  },
+  "TNBC": {
+    "IA": [
+      { label:"手術 ＋ 化学療法（EC→T）", pfs:89, type:"est", source:"SEER統計 Stage I TNBC参照" },
+      { label:"術前化学療法＋ペムブロリズマブ→pCR→継続（KEYNOTE-522推定）", pfs:92, type:"est", source:"KEYNOTE-522 pCR群 92.2%（Stage II-IIIデータ）参照" },
+    ],
+    "IIA": [
+      { label:"術前化学療法＋ペムブロリズマブ→手術→継続（KEYNOTE-522全体）", pfs:83, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III全体）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照群）", pfs:74, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%（Stage II-III）" },
+      { label:"術前化学療法→pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 92.2%（ペムブロ）" },
+      { label:"術前化学療法のみ→pCR達成", pfs:88, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 88.2%（プラセボ）" },
+      { label:"術前化学療法→non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%（non-pCR TNBC）" },
+      { label:"術前化学療法→non-pCR→無追加（CREATE-X 対照）", pfs:56, type:"trial", source:"CREATE-X 観察群 5y DFS 56.1%" },
+      { label:"術前化学療法＋ペムブロリズマブ→non-pCR→cape＋継続", pfs:63, type:"trial", source:"KEYNOTE-522 non-pCR群 5y EFS 62.6%（ペムブロ）" },
+    ],
+    "IIB": [
+      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:81, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:72, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%" },
+      { label:"pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 92.2%" },
+      { label:"non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%" },
+      { label:"non-pCR→無追加", pfs:56, type:"trial", source:"CREATE-X 観察群 56.1%" },
+      { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）", pfs:86, type:"trial", source:"Tutt, OlympiA, NEJM 2021 3y iDFS 85.9%（BRCA+高リスク; TNBC+HR+混在）" },
+      { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）", pfs:77, type:"trial", source:"Tutt, OlympiA, NEJM 2021 プラセボ群 3y iDFS 77.1%" },
+    ],
+    "IIIA": [
+      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:79, type:"est", source:"KEYNOTE-522 81.3%基準（Stage IIを中心、IIIAで若干低下推定）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:70, type:"est", source:"KEYNOTE-522 72.3%基準 Stage IIIAへ調整" },
+      { label:"BRCA1/2変異→オラパリブ（OlympiA）", pfs:86, type:"trial", source:"Tutt, OlympiA, NEJM 2021 3y iDFS 85.9%（高リスク全体）" },
+    ],
+    "IIIB": [
+      { label:"術前化学療法＋ペムブロリズマブ", pfs:69, type:"est", source:"KEYNOTE-522 Stage IIIB調整推定" },
+      { label:"術前化学療法のみ", pfs:59, type:"est", source:"Stage IIIB標準化学療法推定" },
+    ],
+    "IIIC": [
+      { label:"術前化学療法＋ペムブロリズマブ", pfs:60, type:"est", source:"KEYNOTE-522 Stage IIIC調整推定" },
+      { label:"術前化学療法のみ", pfs:50, type:"est", source:"Stage IIIC標準化学療法推定" },
+    ],
+  },
+};
+
+// ── ステージ関数 ──
+function getAnatomical(t, n, m) {
+  if (!t || !n || !m) return null;
+  if (m === "M1") return "IV";
+  if (t === "Tis") return n === "N0" ? "0" : "invalid";
+  if (n === "N3") return "IIIC";
+  if (t === "T4") return "IIIB";
+  if (n === "N2") return "IIIA";
+  if (t === "T3" && (n === "N1" || n === "N1mi")) return "IIIA";
+  if (t === "T3" && n === "N0") return "IIB";
+  if (t === "T2" && n === "N1") return "IIB";
+  if (t === "T2" && (n === "N0" || n === "N1mi")) return "IIA";
+  if ((t === "T0" || t === "T1") && n === "N1") return "IIA";
+  if ((t === "T0" || t === "T1") && n === "N1mi") return "IB";
+  if (t === "T1" && n === "N0") return "IA";
+  if (t === "T0" && n === "N0") return "invalid";
+  return "invalid";
+}
+
+function getPrognostic(anat, er, pr, her2, grade) {
+  if (!anat || anat === "invalid") return null;
+  if (anat === "0" || anat === "IV") return anat;
+  if (!er || !her2 || !grade) return null;
+  const hr = er === "+" || pr === "+";
+  const a = anat;
+  if (her2 === "+") {
+    return { IA:"IA",IB:"IA",IIA:"IIA",IIB:"IIB",IIIA:"IIIA",IIIB:"IIIB",IIIC:"IIIC" }[a] ?? a;
+  }
+  if (hr) {
+    const tbl = {
+      "1":{ IA:"IA",IB:"IA",IIA:"IA",IIB:"IB",IIIA:"IIA",IIIB:"IIIA",IIIC:"IIIB" },
+      "2":{ IA:"IA",IB:"IA",IIA:"IB",IIB:"IIA",IIIA:"IIB",IIIB:"IIIA",IIIC:"IIIB" },
+      "3":{ IA:"IB",IB:"IIA",IIA:"IIA",IIB:"IIB",IIIA:"IIIA",IIIB:"IIIB",IIIC:"IIIC" },
+    };
+    return tbl[grade]?.[a] ?? a;
+  }
+  return { IA:"IB",IB:"IIA",IIA:"IIA",IIB:"IIIA",IIIA:"IIIA",IIIB:"IIIB",IIIC:"IIIC" }[a] ?? a;
+}
+
+function getSubtype(er, pr, her2) {
+  if (!er || !her2) return null;
+  const hr = er === "+" || pr === "+";
+  if (her2 === "+") return hr ? "HR+/HER2+" : "HER2+";
+  return hr ? "HR+/HER2-" : "TNBC";
+}
+
+function isNPlus(n) { return n === "N1" || n === "N2" || n === "N3"; }
+function isN4plus(n, nCount) {
+  if (n === "N2" || n === "N3") return true;
+  if (n === "N1" && nCount === "4+") return true;
+  return false;
+}
+function isN1to3(n, nCount) {
+  return n === "N1mi" || (n === "N1" && nCount === "1-3");
+}
+function isAbemaciclib(n, nCount, t, grade) {
+  if (isN4plus(n, nCount)) return true;
+  if (isN1to3(n, nCount) && (grade === "3" || t === "T3" || t === "T4")) return true;
+  return false;
+}
+function isOncotypeDxEligible(subtype, n, nCount) {
+  if (subtype !== "HR+/HER2-") return false;
+  if (n === "N0" || n === "N1mi") return true;
+  if (n === "N1" && nCount === "1-3") return true;
+  return false;
+}
+
+function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx) {
+  if (!anat || anat === "invalid" || !subtype) return null;
+  const isAdv = anat === "IV";
+  const isHighRisk = ["IIA","IIB","IIIA","IIIB","IIIC"].includes(anat);
+  const nPos = isNPlus(n);
+  const postMeno = menopause === "閉経後";
+  const preMeno  = menopause === "閉経前";
+  const isLuminal = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
+
+  if (anat === "0") {
+    const items = ["手術（温存または全摘）"];
+    if (surgery === "温存") items.push("放射線療法（温存後：残存乳房照射）");
+    return [
+      { cat:"局所療法", items },
+      ...(isLuminal ? [{ cat:"内分泌療法", items:["タモキシフェン または AI（5年間、再発リスク低減）"] }] : []),
+    ];
+  }
+
+  if (isAdv) {
+    if (subtype === "HR+/HER2-") return [
+      { cat:"1次治療：内分泌療法 ＋ CDK4/6阻害薬", items: postMeno
+        ? ["アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）＋ アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）","【根拠】MONALEESA-2、MONARCH-3等 第Ⅲ相試験でPFS・OS延長"]
+        : ["タモキシフェン または アロマターゼ阻害薬 ＋ 卵巣機能抑制（LH-RHアゴニスト）＋ アベマシクリブまたはパルボシクリブ","【根拠】MONALEESA-7、MONARCH-2等"]
+      },
+      { cat:"2次治療：内分泌療法変更 ± CDK4/6 / AKT阻害薬", items:["フルベストラント（ファスロデックス）± CDK4/6阻害薬継続または変更","PIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）＋ フルベストラント（2024年5月承認）","【根拠】MONARCH-2、CAPItello-291試験"]},
+      { cat:"化学療法（内分泌療法耐性後）", items:["単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）、カペシタビン、ゲムシタビン 等","ダトポタマブ デルクステカン（ダトロウェイ）：抗TROP-2 ADC（2024年12月承認）\n【根拠】TROPION-Breast01試験 ※担当医にご確認ください"]},
+    ];
+    if (subtype === "HER2+" || subtype === "HR+/HER2+") return [
+      { cat:"1次治療：抗HER2療法 ＋ 化学療法", items:["トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）＋ タキサン系","【根拠】CLEOPATRA試験 OS中央値57.1か月"]},
+      { cat:"2次治療：T-DXd（エンハーツ）", items:["トラスツズマブ デルクステカン（エンハーツ）：HER2標的ADC","病勢進行リスク72%減少（vs T-DM1）","【根拠】DESTINY-Breast03試験"]},
+      { cat:"3次治療：ツカイザ 他", items:["ツカチニブ（ツカイザ）＋ トラスツズマブ ＋ カペシタビン\n2026年2月 日本承認。脳転移例にも有効\n【根拠】HER2CLIMB試験（NEJM 2020）","T-DM1（カドサイラ）、ラパチニブ（タイケルブ）＋ カペシタビン 等"]},
+      ...(subtype==="HR+/HER2+" ? [{ cat:"内分泌療法（HR陽性例に追加）", items:["内分泌療法を薬物療法に組み合わせます"] }] : []),
+    ];
+    return [
+      { cat:"1次治療：化学療法 ± 免疫療法（± PARP阻害薬）", items:["ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル または ゲムシタビン＋カルボプラチン：PD-L1陽性（CPS≥10）例に推奨\n【根拠】KEYNOTE-355試験","── gBRCA1/2変異陽性の場合（要事前BRCA検査）──","オラパリブ（リムパーザ）、タラゾパリブ（ターゼナ）：転移後1次治療からPARP阻害薬が選択肢"]},
+      { cat:"2次治療以降：抗体薬物複合体 他", items:["サシツズマブ ゴビテカン（トロデルビ）：抗TROP-2 ADC\nOS中央値12.1か月 vs 6.7か月\n【根拠】ASCENT試験、2024年9月日本承認","エリブリン（ハラヴェン）、カペシタビン、ゲムシタビン 等"]},
+    ];
+  }
+
+  const res = [];
+  const localItems = ["手術（腫瘍径・病期に応じて温存または全摘 ± 再建）"];
+  if (surgery === "温存") {
+    localItems.push("放射線療法（温存後：残存乳房照射 16〜20回）");
+  } else if (surgery === "全摘") {
+    if (isHighRisk || nPos) localItems.push("術後照射（リンパ節転移数・リスクに応じて胸壁/鎖骨上照射）");
+  } else {
+    localItems.push("放射線療法（温存後 または リンパ節再発リスク高例）");
+  }
+  res.push({ cat:"局所療法", items:localItems });
+
+  if (subtype === "HR+/HER2-") {
+    const abema = isAbemaciclib(n, nCount, t, grade);
+    const etItems = postMeno
+      ? ["アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）5〜10年"]
+      : preMeno
+      ? ["タモキシフェン 5〜10年（閉経前標準）","卵巣機能抑制（LH-RHアゴニスト）＋ タモキシフェン または AI：閉経前高リスク例（SOFT/TEXT試験）"]
+      : ["タモキシフェン または アロマターゼ阻害薬（5〜10年）"];
+
+    if (abema) {
+      const why = isN4plus(n, nCount) ? "N4個以上" : grade === "3" ? "N1-3個＋Grade3" : "N1-3個＋腫瘍径≥5cm";
+      etItems.push(`アベマシクリブ（ベージニオ）＋ 内分泌療法 2年：再発高リスク（${why}、monarchE基準）`);
+    } else if (nPos && isN1to3(n, nCount)) {
+      etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
+    }
+    if (nPos) etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
+    if (nPos && isHighRisk) etItems.push("オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・N1以上高リスク例（OlympiA試験）※ BRCA検査が必要");
+    res.push({ cat:"内分泌療法 ＋ 補助薬物療法", items:etItems });
+
+    const isNeoAdjSelected = primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法";
+    if (isOncotypeDxEligible(subtype, n, nCount) && !isNeoAdjSelected) {
+      const odxMsg = oncotype === "高リスク"
+        ? "Oncotype DX 高リスク（RS≥26）→ 化学療法を推奨"
+        : oncotype === "中リスク"
+        ? "Oncotype DX 中リスク（RS 16-25）→ 閉経前は化学療法考慮、閉経後は内分泌療法のみも選択肢"
+        : oncotype === "低リスク"
+        ? "Oncotype DX 低リスク（RS≤15）→ 化学療法省略を強く考慮"
+        : "Oncotype DX 検査：腫瘍の遺伝子を調べて再発リスクと化学療法の効果を予測（N0〜N1(1-3個)/HR+/HER2-で保険適用）";
+      res.push({ cat:"Oncotype DX（ゲノム検査）", items:[odxMsg] });
+    }
+    if (["T2","T3","T4"].includes(t)) {
+      res.push({ cat:"術前化学療法（ネオアジュバント）の候補", items:["HR+/HER2-のT2以上では術前化学療法を選択することがあります","EC療法（エピルビシン＋シクロホスファミド）→ パクリタキセルが基本レジメン","※「初回治療方針」で「術前化学療法（HR+/HER2-）」を選択すると治療スケジュールが表示されます"]});
+    }
+    if (isHighRisk || oncotype === "高リスク") {
+      res.push({ cat:"化学療法（術後・高リスク例）", items:["AC→T（アンスラサイクリン→タキサン）、TC 等"] });
+    }
+  }
+
+  if (subtype === "HER2+" || subtype === "HR+/HER2+") {
+    if (isHighRisk)
+      res.push({ cat:"薬物療法（術前推奨）", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）","術前でpCR未達の場合 → 術後 T-DM1（カドサイラ）に変更（KATHERINE 試験）"] });
+    else
+      res.push({ cat:"薬物療法", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）1年間","低リスク例（T1N0 等）：パクリタキセル ＋ トラスツズマブ も選択肢"] });
+    if (subtype === "HR+/HER2+") res.push({ cat:"内分泌療法", items:["ER/PR 陽性例には内分泌療法を追加"] });
+  }
+
+  if (subtype === "TNBC") {
+    const items = ["術前：ペムブロリズマブ（キイトルーダ）＋ アンスラサイクリン＋タキサン（KEYNOTE-522）","術後：ペムブロリズマブ継続（1年）","術前でpCR未達の場合 → カペシタビン追加を考慮"];
+    if (nPos) items.push("オラパリブ（リムパーザ）1年：gBRCA1/2 変異陽性・N1以上の高リスク例（OlympiA 試験）※ BRCA 検査が必要");
+    res.push({ cat:"化学療法 ＋ 免疫療法", items });
+  }
+
+  return res;
+}
+
+// ── Treatment Schedule ────────────────────────────────────────────────
+function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
+  const isNeoAdj   = primaryTx === "術前化学療法";
+  const isNeoAdjHR = primaryTx === "術前化学内分泌療法";
+  const isHER2     = subtype === "HER2+" || subtype === "HR+/HER2+";
+  const isHR       = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
+  const isTNBC     = subtype === "TNBC";
+  const hasSLNB    = lymphNode === "センチネル生検" || lymphNode === "両方";
+  const isBreastCon = surgery === "温存";
+  const postMeno   = menopause === "閉経後";
+  const rows = [];
+
+  if (isNeoAdjHR) {
+    rows.push({ phase:"術前化学療法", period:"第1〜12週（EC療法）", content:"EC療法（エピルビシン＋シクロホスファミド）\n3週毎4サイクル", color:"#e8f0fb" });
+    rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
+    rows.push({ phase:"術前内分泌療法（追加時）", period:"化学療法終了後 2〜4か月", content:(postMeno ? "アロマターゼ阻害薬（レトロゾール等）" : "LH-RHアゴニスト＋タモキシフェン等") + "\n※化学療法単独で手術の場合もあり", color:"#f3e8fb" });
+    rows.push({ phase:"手術", period:"術前治療終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
+    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）\n高リスク：アベマシクリブ2年追加" : "タモキシフェン または アロマターゼ阻害薬\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射\n断端陽性・リスク高：追加照射", color:"#fff8e1" });
+  } else if (isNeoAdj) {
+    if (isHER2) {
+      rows.push({ phase:"術前化学療法", period:"第1〜12週", content:"パクリタキセル（3週毎）\n＋ペルツズマブ（パージェタ）\n＋トラスツズマブ（ハーセプチン）", color:"#e8f0fb" });
+      rows.push({ phase:"術前化学療法", period:"第13〜24週", content:"EC療法（エピルビシン＋シクロホスファミド）\n※抗HER2療法は休止", color:"#e8f0fb" });
+    } else if (isTNBC) {
+      rows.push({ phase:"術前化学療法", period:"第1〜12週", content:"パクリタキセル（3週毎）\n＋ペムブロリズマブ（キイトルーダ）", color:"#e8f0fb" });
+      rows.push({ phase:"術前化学療法", period:"第13〜24週", content:"EC療法（エピルビシン＋シクロホスファミド）\n＋ペムブロリズマブ", color:"#e8f0fb" });
+    } else {
+      rows.push({ phase:"術前化学療法", period:"第1〜24週", content:"担当医と相談の上、最適なレジメンを決定", color:"#e8f0fb" });
+    }
+    rows.push({ phase:"手術", period:"化学療法終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
+    if (isHER2) {
+      rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"トラスツズマブ継続（合計1年完了まで）", color:"#e8f7ee" });
+      rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"T-DM1（カドサイラ）14サイクル（KATHERINE試験）", color:"#fdeaea" });
+    } else if (isTNBC) {
+      rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
+      rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続", color:"#fdeaea" });
+    }
+    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:"タモキシフェン または アロマターゼ阻害薬\n（閉経状況により選択）\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
+  } else if (surgery === "非手術（薬物療法）") {
+    if (subtype === "HR+/HER2-") {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"内分泌療法 ＋ CDK4/6阻害薬（推奨）\n・AI（レトロゾール等）または タモキシフェン＋卵巣機能抑制\n・＋アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"フルベストラント（ファスロデックス）± CDK4/6阻害薬\nPIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）+ フルベストラント", color:"#ddeeff" });
+      rows.push({ phase:"化学療法（耐性後）", period:"2次治療後 進行時", content:"単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）等\nダトポタマブ デルクステカン（ダトロウェイ）（2024年12月承認）", color:"#f0e8fb" });
+    } else if (subtype === "HER2+" || subtype === "HR+/HER2+") {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）＋ タキサン系\n【根拠】CLEOPATRA試験 OS中央値57.1か月", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"トラスツズマブ デルクステカン（エンハーツ）：T-DXd\n病勢進行リスク72%減少\n【根拠】DESTINY-Breast03試験", color:"#ddeeff" });
+      rows.push({ phase:"3次治療（参考）", period:"2次治療後 進行時", content:"ツカチニブ（ツカイザ）＋ トラスツズマブ ＋ カペシタビン\n2026年2月 日本承認。脳転移例にも有効\n【根拠】HER2CLIMB試験", color:"#f0e8fb" });
+    } else {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"化学療法 ± 免疫療法\n・ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル等（PD-L1陽性 CPS≥10）\n・PD-L1陰性例：アントラサイクリン系・タキサン系\n【根拠】KEYNOTE-355試験", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療以降", period:"1次治療後 進行時", content:"サシツズマブ ゴビテカン（トロデルビ）：抗TROP-2 ADC（2024年9月 日本承認）\nその他：エリブリン（ハラヴェン）、カペシタビン等\ngBRCA1/2変異陽性例：PARP阻害薬を追加検討", color:"#ddeeff" });
+    }
+    rows.push({ phase:"定期評価", period:"2〜3か月毎", content:"画像検査・血液検査で病状の変化を確認\n効果・副作用に応じてレジメン変更を検討", color:"#f5f5f5" });
+    rows.push({ phase:"症状緩和ケア", period:"治療中〜継続", content:"疼痛・倦怠感・浮腫などの症状コントロール\n緩和ケアチームと連携", color:"#f0f8f0" });
+  } else {
+    rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
+    if (!isHR || isTNBC) {
+      rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : isTNBC ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
+    } else {
+      rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
+    }
+    if (isHER2) rows.push({ phase:"術後抗HER2療法", period:"合計1年", content:"トラスツズマブ（＋ペルツズマブ）", color:"#e8f7ee" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:"タモキシフェン または アロマターゼ阻害薬\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
+  }
+
+  if (surgery !== "非手術（薬物療法）") {
+    rows.push({ phase:"定期フォロー", period:"治療中〜以降", content:"定期診察・血液検査・画像検査\n副作用・再発の早期発見", color:"#f5f5f5" });
+  }
+  return rows;
+}
+
+// ── 5年PFSパネル ──────────────────────────────────────────────────────
+function PfsPanel({ anat, subtype }) {
+  const [expanded, setExpanded] = useState(true);
+  if (!anat || !subtype || anat === "invalid" || anat === "IV" || anat === "0") return null;
+  const data = PFS_DATA[subtype]?.[anat];
+  if (!data || data.length === 0) return null;
+
+  const maxPfs = 100;
+
+  const pfsColor = (v) => {
+    if (v >= 88) return { bar:"linear-gradient(90deg,#1a7a4a,#2aaa5a)", txt:"#1a6a3a" };
+    if (v >= 75) return { bar:"linear-gradient(90deg,#3060aa,#4a80cc)", txt:"#2a508a" };
+    if (v >= 60) return { bar:"linear-gradient(90deg,#8a5500,#bb8800)", txt:"#7a4a00" };
+    return { bar:"linear-gradient(90deg,#992200,#cc3300)", txt:"#882200" };
+  };
+
+  return (
+    <div style={{ marginTop:20 }}>
+      {/* ヘッダー */}
+      <div
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          background:"linear-gradient(135deg,#1e3a5a,#2a5a8a)",
+          borderRadius:expanded?"8px 8px 0 0":"8px",
+          padding:"9px 14px", cursor:"pointer", userSelect:"none",
+        }}
+      >
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <span style={{ fontSize:13, fontWeight:800, color:"#fff", letterSpacing:"0.03em" }}>
+            📊 5年PFS（無増悪生存率）— 治療別比較
+          </span>
+          <span style={{ fontSize:10, background:"rgba(255,255,255,0.18)", color:"#ddeeff",
+            borderRadius:4, padding:"1px 6px", fontWeight:600 }}>
+            Stage {anat} / {subtype}
+          </span>
+        </div>
+        <span style={{ fontSize:12, color:"#aaccee" }}>{expanded ? "▲ 閉じる" : "▼ 開く"}</span>
+      </div>
+
+      {expanded && (
+        <div style={{
+          border:"1.5px solid #d0dcee", borderTop:"none",
+          borderRadius:"0 0 10px 10px", padding:"14px 16px", background:"#f8faff",
+        }}>
+          {/* 免責 */}
+          <div style={{
+            fontSize:10.5, color:"#6680aa", background:"#eef4ff",
+            border:"1px solid #ccdaee", borderRadius:6, padding:"6px 10px",
+            marginBottom:14, lineHeight:1.7,
+          }}>
+            ⚠️ <b>参考値</b>：主要RCT（以下に出典を記載）の報告値をベースにした推定値です。欧米試験データが中心のため日本人での値と乖離する可能性があります。
+            個々の患者さんの状況・合併症・全身状態・PS等により大きく異なります。臨床判断の参考としてご使用ください。
+          </div>
+
+          {/* 凡例 */}
+          <div style={{ display:"flex", gap:12, marginBottom:12, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <div style={{ width:14, height:14, borderRadius:3, border:"2px solid #2a6aaa", background:"#eef4ff" }} />
+              <span style={{ fontSize:11, color:"#555" }}>試験直接値（RCT報告）</span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+              <div style={{ width:14, height:14, borderRadius:3, border:"2px dashed #aabbcc", background:"#f5f8ff" }} />
+              <span style={{ fontSize:11, color:"#555" }}>推定値（メタ解析・SEER等より）</span>
+            </div>
+          </div>
+
+          {/* バーチャート */}
+          <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
+            {data.map((item, i) => {
+              const { bar: barGrad, txt: txtCol } = pfsColor(item.pfs);
+              const barW = `${item.pfs}%`;
+              return (
+                <div key={i} style={{
+                  background:"#fff",
+                  border: item.type === "trial"
+                    ? "1.5px solid #bacede"
+                    : "1.5px dashed #ccd8e8",
+                  borderRadius:8, padding:"9px 12px",
+                }}>
+                  {/* ラベル行 */}
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:5 }}>
+                    <div style={{ flex:1, paddingRight:10 }}>
+                      <span style={{ fontSize:12, color:"#222", fontWeight:600, lineHeight:1.5 }}>
+                        {item.label}
+                      </span>
+                      {item.type === "trial" && (
+                        <span style={{ marginLeft:6, fontSize:10, background:"#2a6aaa", color:"#fff",
+                          borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>
+                          RCT
+                        </span>
+                      )}
+                    </div>
+                    <span style={{
+                      fontSize:18, fontWeight:900, color:txtCol, minWidth:52, textAlign:"right", lineHeight:1,
+                    }}>
+                      {item.pfs}<span style={{ fontSize:11, fontWeight:600 }}>%</span>
+                    </span>
+                  </div>
+
+                  {/* バー */}
+                  <div style={{ background:"#eaeff7", borderRadius:6, height:12, overflow:"hidden", marginBottom:4 }}>
+                    <div
+                      className="pfs-bar"
+                      style={{
+                        "--bar-w": barW,
+                        height:"100%", borderRadius:6,
+                        width: barW,
+                        background: barGrad,
+                      }}
+                    />
+                  </div>
+
+                  {/* 出典 */}
+                  <div style={{ fontSize:10, color:"#8899bb", lineHeight:1.5 }}>
+                    出典：{item.source}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* カラーガイド */}
+          <div style={{ marginTop:12, display:"flex", gap:8, flexWrap:"wrap" }}>
+            {[
+              { range:"≥88%", col:"#1a6a3a", grad:"#1a7a4a" },
+              { range:"75〜87%", col:"#2a508a", grad:"#3060aa" },
+              { range:"60〜74%", col:"#7a4a00", grad:"#8a5500" },
+              { range:"<60%", col:"#882200", grad:"#992200" },
+            ].map(({ range, col, grad }) => (
+              <div key={range} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <div style={{ width:12, height:12, borderRadius:3, background:grad }} />
+                <span style={{ fontSize:10, color:col, fontWeight:600 }}>{range}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── UI Components ──────────────────────────────────────────────────────
+function TnmBtn({ label, active, onToggle, disabled }) {
+  return (
+    <button onClick={onToggle} disabled={disabled} style={{
+      padding:"8px 13px", borderRadius:8, minWidth:48, lineHeight:1,
+      border:active?"2px solid #1a5fa8":"2px solid #d4dae4",
+      background:active?"#1a5fa8":disabled?"#f5f5f5":"#fff",
+      color:active?"#fff":disabled?"#ccc":"#333",
+      fontSize:14, fontWeight:active?700:500,
+      cursor:disabled?"not-allowed":"pointer", transition:"all 0.12s", opacity:disabled?0.5:1,
+    }}>{label}</button>
+  );
+}
+
+function SegBtn({ options, value, onChange, small }) {
+  return (
+    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+      {options.map(opt => {
+        const v = typeof opt === "string" ? opt : opt.value;
+        const l = typeof opt === "string" ? opt : opt.label;
+        const active = value === v;
+        return (
+          <button key={v} onClick={()=>onChange(v===value?null:v)} style={{
+            padding: small?"5px 10px":"7px 14px", borderRadius:8,
+            border:active?"2px solid #1a5fa8":"2px solid #d4dae4",
+            background:active?"#1a5fa8":"#fff", color:active?"#fff":"#333",
+            fontSize:small?12:13, fontWeight:active?700:500,
+            cursor:"pointer", transition:"all 0.12s",
+          }}>{l}</button>
+        );
+      })}
+    </div>
+  );
+}
+
+function PlusMinus({ label, value, onChange }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+      <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:32 }}>{label}</span>
+      {["+","-"].map(v => (
+        <button key={v} onClick={()=>onChange(v===value?null:v)} style={{
+          width:32, height:28, borderRadius:6,
+          border:value===v?"2px solid #1a5fa8":"2px solid #d4dae4",
+          background:value===v?"#1a5fa8":"#fff", color:value===v?"#fff":"#555",
+          fontSize:15, fontWeight:700, cursor:"pointer", lineHeight:1, transition:"all 0.12s",
+        }}>{v}</button>
+      ))}
+    </div>
+  );
+}
+
+const arrowBtn = { width:24, height:24, borderRadius:5, border:"1.5px solid #d4dae4", background:"#fff", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0, color:"#555" };
+
+function Ki67Slider({ value, onChange }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+      <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:42 }}>Ki-67</span>
+      <button onClick={()=>onChange(Math.max(0,value-1))} style={arrowBtn}>◀</button>
+      <div style={{ position:"relative", flex:1 }}>
+        <input type="range" min={0} max={100} value={value} onChange={e=>onChange(Number(e.target.value))} style={{ width:"100%", accentColor:"#1a5fa8", cursor:"pointer" }} />
+        <div style={{ position:"absolute", top:-4, left:"20%", transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
+      </div>
+      <button onClick={()=>onChange(Math.min(100,value+1))} style={arrowBtn}>▶</button>
+      <span style={{ fontSize:13, fontWeight:700, minWidth:40, textAlign:"right", color:value>=20?"#b03000":"#333" }}>{value}%</span>
+    </div>
+  );
+}
+
+function RowLabel({ children }) {
+  return <div style={{ fontSize:11, fontWeight:700, color:"#999", letterSpacing:"0.1em", marginBottom:7 }}>{children}</div>;
+}
+function Divider({ title }) {
+  return <div style={{ borderTop:"1px solid #eee", paddingTop:14, fontSize:10, fontWeight:700, letterSpacing:"0.15em", color:"#bbb", textTransform:"uppercase" }}>{title}</div>;
+}
+
+function TreatmentScheduleTable({ primaryTx, subtype, surgery, lymphNode, menopause }) {
+  const rows = buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause);
+  if (!rows.length) return null;
+  const PHASE_COLOR = {
+    "術前化学療法":"#1a5fa8","手術":"#b05a00","術後療法":"#1a7a4a",
+    "術後化学療法":"#1a5fa8","術後抗HER2療法":"#1a7a4a",
+    "内分泌療法":"#7a3a9a","術後内分泌療法":"#7a3a9a",
+    "放射線療法":"#8a6a00","定期フォロー":"#555",
+    "術前内分泌療法（追加時）":"#7a3a9a",
+    "1次治療":"#1a5fa8","2次治療":"#334488","3次治療（参考）":"#553388",
+    "化学療法（耐性後）":"#554400","定期評価":"#555","症状緩和ケア":"#2a7a3a",
+  };
+  let lastPhase = null;
+  return (
+    <div style={{ marginTop:20 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"#fff", background:"#2c3e6a", borderRadius:6, padding:"5px 12px", marginBottom:10, display:"inline-block" }}>治療スケジュール（目安）</div>
+      <div style={{ fontSize:11, color:"#888", marginBottom:8 }}>※個人差・病理結果・合併症により変更になる場合があります</div>
+      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+        <thead>
+          <tr style={{ background:"#f0f4fa" }}>
+            <th style={{ padding:"7px 9px", textAlign:"left", fontWeight:700, color:"#334", borderBottom:"2px solid #1a5fa8", width:"28%" }}>フェーズ</th>
+            <th style={{ padding:"7px 9px", textAlign:"left", fontWeight:700, color:"#334", borderBottom:"2px solid #1a5fa8", width:"24%" }}>時期</th>
+            <th style={{ padding:"7px 9px", textAlign:"left", fontWeight:700, color:"#334", borderBottom:"2px solid #1a5fa8" }}>内容</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => {
+            const showPhase = row.phase !== lastPhase;
+            lastPhase = row.phase;
+            return (
+              <tr key={i} style={{ background: row.color, borderBottom:"1px solid #e0e8f0" }}>
+                <td style={{ padding:"7px 9px", verticalAlign:"top", fontWeight:700, color: PHASE_COLOR[row.phase] ?? "#333" }}>{showPhase ? row.phase : ""}</td>
+                <td style={{ padding:"7px 9px", verticalAlign:"top", color:"#555", whiteSpace:"pre-line", fontSize:11 }}>{row.period}</td>
+                <td style={{ padding:"7px 9px", verticalAlign:"top", color:"#222", whiteSpace:"pre-line", lineHeight:1.65 }}>{row.content}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────────
+function App() {
+  const [patientName, setPatientName] = useState("");
+  const [age, setAge] = useState("");
+  const [menopause, setMenopause] = useState(null);
+  const [surgery, setSurgery] = useState(null);
+  const [primaryTx, setPrimaryTx] = useState(null);
+  const [lymphNode, setLymphNode] = useState(null);
+  const [selT, setSelT] = useState(null);
+  const [selT4sub, setSelT4sub] = useState(null);
+  const [selN, setSelN] = useState(null);
+  const [nCount, setNCount] = useState(null);
+  const [selM, setSelM] = useState(null);
+  const [tumorSize, setTumorSize] = useState(null);
+  const [lymphCount, setLymphCount] = useState(null);
+  const [er, setEr] = useState(null);
+  const [pr, setPr] = useState(null);
+  const [her2, setHer2] = useState(null);
+  const [grade, setGrade] = useState(null);
+  const [ki67, setKi67] = useState(20);
+  const [oncotype, setOncotype] = useState(null);
+
+  function tFromSize(mm) {
+    if (mm === null) return null;
+    if (mm === 0) return "T0";
+    if (mm <= 20) return "T1";
+    if (mm <= 50) return "T2";
+    return "T3";
+  }
+  function nFromCount(n) {
+    if (n === null) return null;
+    if (n === 0) return "N0";
+    if (n <= 3) return "N1";
+    if (n <= 9) return "N2";
+    return "N3";
+  }
+
+  const autoT = tFromSize(tumorSize);
+  const autoN = nFromCount(lymphCount);
+  const autoNCount = lymphCount === null ? null : lymphCount === 0 ? null : lymphCount <= 3 ? "1-3" : "4+";
+  const activeT = selT === "T4" ? "T4" : (tumorSize !== null ? autoT : selT);
+  const activeN = lymphCount !== null ? autoN : selN;
+  const activeNCount = lymphCount !== null ? autoNCount : nCount;
+
+  const anat      = getAnatomical(activeT, activeN, selM);
+  const prog      = getPrognostic(anat, er, pr, her2, grade);
+  const subtype   = getSubtype(er, pr, her2);
+  const treatment = getTreatment(anat, subtype, ki67, activeN, activeNCount, activeT, grade, menopause, surgery, oncotype, primaryTx);
+
+  const stageLabel = (anat && anat !== "invalid") ? `Stage ${anat}` : null;
+  const stageColor = (anat && anat !== "invalid") ? (STAGE_COLOR[anat] || "#333") : "#ccc";
+  const allTNM     = activeT && activeN && selM;
+  const showProgNote  = allTNM && anat !== "invalid" && anat !== "0" && anat !== "IV" && prog && prog !== anat;
+  const showNCount    = activeN === "N1";
+  const biomarkersComplete = er !== null && her2 !== null && grade !== null;
+  const showNeoAdj    = subtype === "TNBC" || subtype === "HER2+" || subtype === "HR+/HER2+";
+  const showNeoAdjHR  = subtype === "HR+/HER2-" && ["T2","T3","T4"].includes(activeT);
+  const isM1 = selM === "M1";
+
+  useEffect(() => {
+    if (isM1) { setSurgery("非手術（薬物療法）"); setLymphNode(null); setPrimaryTx(null); }
+  }, [isM1]);
+
+  function handleReset() {
+    setPatientName(""); setAge(""); setMenopause(null); setSurgery(null);
+    setPrimaryTx(null); setLymphNode(null);
+    setSelT(null); setSelT4sub(null); setSelN(null); setNCount(null); setSelM(null);
+    setTumorSize(null); setLymphCount(null);
+    setEr(null); setPr(null); setHer2(null); setGrade(null); setKi67(20);
+    setOncotype(null);
+  }
+
+  const hasInput = activeT||activeN||selM||er||pr||her2||grade||patientName||age||menopause||surgery||primaryTx||lymphNode;
+  const today = new Date().toLocaleDateString("ja-JP", { year:"numeric", month:"long", day:"numeric" });
+  const showSchedule = treatment && biomarkersComplete && (primaryTx || surgery);
+  // 5年PFSパネルはバイオマーカー確定後に表示
+  const showPfs = biomarkersComplete && subtype && anat && anat !== "invalid" && anat !== "0" && anat !== "IV";
+
+  return (
+    <div style={{ minHeight:"100vh", display:"flex", justifyContent:"center", padding:"18px 12px 60px" }}>
+      <div style={{ width:"100%", maxWidth:520 }} id="print-area">
+
+        {/* Header */}
+        <div style={{ textAlign:"center", marginBottom:14 }} className="no-print">
+          <h1 style={{ fontSize:19, fontWeight:800, color:"#111" }}>乳がん TNM分類・治療方針</h1>
+          <div style={{ fontSize:11, color:"#bbb", marginTop:3 }}>AJCC 8th / APIキー不要スタンドアローン版</div>
+        </div>
+
+        <div style={{ background:"#fff", borderRadius:14, boxShadow:"0 2px 12px rgba(0,0,0,0.08)", overflow:"hidden" }}>
+
+          {/* Stage display */}
+          <div style={{ minHeight:140, padding:"16px 20px 12px", borderBottom:"1px solid #eaeef3", display:"flex", flexDirection:"column", justifyContent:"space-between" }}>
+            <div style={{ display:"flex", alignItems:"baseline", gap:10, flexWrap:"wrap" }}>
+              <div style={{ fontSize:stageLabel?32:16, fontWeight:800, color:stageLabel?stageColor:"#ccc", lineHeight:1 }}>
+                {anat==="invalid"?"—":stageLabel??"—"}
+              </div>
+              {anat==="invalid"&&allTNM&&<div style={{ fontSize:12, color:"#a04000" }}>AJCC 8版のステージ群に収載されていません</div>}
+              {showProgNote&&<div style={{ fontSize:11, color:"#999" }}>予後予測Stage: <b style={{ color:STAGE_COLOR[prog]??"#555" }}>{prog}</b> — バイオマーカー補正後</div>}
+              {allTNM&&anat!=="invalid"&&anat!=="0"&&anat!=="IV"&&!prog&&<div style={{ fontSize:11, color:"#bbb" }}>← バイオマーカーで補正可</div>}
+              {subtype&&<span style={{ fontSize:11, background:"#f0f4fa", color:"#558", borderRadius:4, padding:"2px 7px", fontWeight:700 }}>{subtype}</span>}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:3, marginTop:8 }}>
+              {[["T",activeT,T_DESC],["N",activeN,N_DESC],["M",selM,M_DESC]].map(([lbl,sel,desc])=>(
+                <div key={lbl} style={{ fontSize:12, color:sel?"#444":"#ddd", lineHeight:1.4 }}>
+                  <span style={{ fontWeight:700, marginRight:4, color:sel?"#888":"#ddd" }}>{lbl}：</span>
+                  {lbl==="T" && sel==="T4" ? (selT4sub ? `${selT4sub}：${T4_SUB_DESC[selT4sub]}` : desc["T4"]) : sel ? desc[sel] : "—"}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding:"16px 20px", display:"flex", flexDirection:"column", gap:14 }}>
+
+            {/* Patient info */}
+            <Divider title="患者情報（任意）" />
+            <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+              <div style={{ flex:2, minWidth:140 }}>
+                <RowLabel>患者氏名</RowLabel>
+                <input type="text" value={patientName} onChange={e=>setPatientName(e.target.value)} placeholder="例：山田 花子"
+                  style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d4dae4", fontSize:13, color:"#333" }} />
+              </div>
+              <div style={{ flex:1, minWidth:72 }}>
+                <RowLabel>年齢</RowLabel>
+                <input type="number" value={age} onChange={e=>setAge(e.target.value)} placeholder="例：52" min={0} max={120}
+                  style={{ width:"100%", padding:"7px 10px", borderRadius:7, border:"1.5px solid #d4dae4", fontSize:13, color:"#333" }} />
+              </div>
+            </div>
+
+            {/* TNM */}
+            <Divider title="TNM 分類" />
+
+            {/* T */}
+            <div>
+              <RowLabel>T — 原発腫瘍</RowLabel>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10, background:"#f8faff", borderRadius:8, padding:"8px 10px" }}>
+                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>腫瘍径</span>
+                <button onClick={()=>setTumorSize(v => v===null?20:Math.max(1,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
+                <div style={{ position:"relative", flex:1 }}>
+                  <input type="range" min={1} max={80} value={tumorSize ?? 20} disabled={tumorSize===null}
+                    onChange={e=>setTumorSize(Number(e.target.value))}
+                    style={{ width:"100%", accentColor:"#1a5fa8", cursor:tumorSize===null?"not-allowed":"pointer", opacity:tumorSize===null?0.4:1 }} />
+                  {[20,50].map(v=>(
+                    <div key={v} style={{ position:"absolute", top:-4, left:`${((v-1)/79)*100}%`, transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
+                  ))}
+                </div>
+                <button onClick={()=>setTumorSize(v => v===null?20:Math.min(80,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
+                <span style={{ fontSize:13, fontWeight:700, minWidth:48, textAlign:"right", color:"#1a5fa8" }}>
+                  {tumorSize===null ? "—" : `${tumorSize} mm`}
+                </span>
+                <button onClick={()=>setTumorSize(null)} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:tumorSize===null?"#f5f5f5":"#fff", color:tumorSize===null?"#ccc":"#888", cursor:tumorSize===null?"not-allowed":"pointer", fontSize:11 }}>クリア</button>
+              </div>
+              <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                {T_ITEMS.map(t=>(
+                  <TnmBtn key={t} label={t} active={activeT===t} onToggle={()=>{
+                    if (t === "T4") { setSelT(selT==="T4"?null:"T4"); setTumorSize(null); }
+                    else { const cur = !tumorSize && selT===t; setSelT(cur?null:t); setTumorSize(null); }
+                  }} />
+                ))}
+              </div>
+              {activeT === "T4" && (
+                <div style={{ marginTop:7, display:"flex", gap:5, flexWrap:"wrap" }}>
+                  {["T4a","T4b","T4c","T4d"].map(sub=>(
+                    <button key={sub} onClick={()=>setSelT4sub(selT4sub===sub?null:sub)} style={{
+                      padding:"5px 10px", borderRadius:6, fontSize:12,
+                      border:selT4sub===sub?"2px solid #b03000":"2px solid #f0d0c0",
+                      background:selT4sub===sub?"#b03000":"#fff8f5", color:selT4sub===sub?"#fff":"#a03000", fontWeight:selT4sub===sub?700:500, cursor:"pointer",
+                    }}>{sub}</button>
+                  ))}
+                </div>
+              )}
+              {activeT && activeT !== "T4" && (
+                <div style={{ marginTop:5, fontSize:11, color:"#888" }}>→ {T_DESC[activeT]}</div>
+              )}
+            </div>
+
+            {/* N */}
+            <div>
+              <RowLabel>N — リンパ節</RowLabel>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10, background:"#f8faff", borderRadius:8, padding:"8px 10px" }}>
+                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>転移疑い</span>
+                <button onClick={()=>setLymphCount(v => v===null?0:Math.max(0,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
+                <div style={{ position:"relative", flex:1 }}>
+                  <input type="range" min={0} max={20} value={lymphCount ?? 0} disabled={lymphCount===null}
+                    onChange={e=>setLymphCount(Number(e.target.value))}
+                    style={{ width:"100%", accentColor:"#1a5fa8", cursor:lymphCount===null?"not-allowed":"pointer", opacity:lymphCount===null?0.4:1 }} />
+                  {[1,4,10].map(v=>(
+                    <div key={v} style={{ position:"absolute", top:-4, left:`${(v/20)*100}%`, transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
+                  ))}
+                </div>
+                <button onClick={()=>setLymphCount(v => v===null?0:Math.min(20,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
+                <span style={{ fontSize:13, fontWeight:700, minWidth:36, textAlign:"right", color:"#1a5fa8" }}>
+                  {lymphCount===null ? "—" : `${lymphCount}個`}
+                </span>
+                <button onClick={()=>setLymphCount(null)} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:lymphCount===null?"#f5f5f5":"#fff", color:lymphCount===null?"#ccc":"#888", cursor:lymphCount===null?"not-allowed":"pointer", fontSize:11 }}>クリア</button>
+              </div>
+              <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+                {N_ITEMS.map(n=>(
+                  <TnmBtn key={n} label={n} active={activeN===n} onToggle={()=>{
+                    if (lymphCount !== null) setLymphCount(null);
+                    setSelN(selN===n?null:n);
+                  }} />
+                ))}
+              </div>
+              {showNCount && (
+                <div style={{ marginTop:7 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#888", marginBottom:5 }}>N1 転移個数</div>
+                  <SegBtn options={["1-3","4+"]} value={activeNCount} onChange={v=>{
+                    if (lymphCount !== null) setLymphCount(null);
+                    setNCount(v);
+                  }} small />
+                </div>
+              )}
+              {activeN && <div style={{ marginTop:5, fontSize:11, color:"#888" }}>→ {N_DESC[activeN]}</div>}
+            </div>
+
+            {/* M */}
+            <div>
+              <RowLabel>M — 遠隔転移</RowLabel>
+              <div style={{ display:"flex", gap:5 }}>
+                {M_ITEMS.map(m=>(
+                  <TnmBtn key={m} label={m} active={selM===m} onToggle={()=>setSelM(selM===m?null:m)} />
+                ))}
+              </div>
+              {selM && <div style={{ marginTop:5, fontSize:11, color:selM==="M1"?"#a02000":"#888" }}>→ {M_DESC[selM]}</div>}
+            </div>
+
+            {/* Biomarkers */}
+            {allTNM && anat !== "invalid" && (
+              <>
+                <Divider title="バイオマーカー" />
+                <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                  <PlusMinus label="ER" value={er} onChange={setEr} />
+                  <PlusMinus label="PgR" value={pr} onChange={setPr} />
+                  <PlusMinus label="HER2" value={her2} onChange={setHer2} />
+                </div>
+                <div>
+                  <RowLabel>Grade（核グレード）</RowLabel>
+                  <SegBtn options={["1","2","3","未施行"]} value={grade} onChange={setGrade} small />
+                </div>
+                <Ki67Slider value={ki67} onChange={setKi67} />
+              </>
+            )}
+
+            {/* Oncotype DX */}
+            {biomarkersComplete && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
+              <div>
+                <RowLabel>Oncotype DX（術前は医療保険未承認）</RowLabel>
+                <SegBtn options={["低リスク","中リスク","高リスク","未施行"]} value={oncotype} onChange={setOncotype} small />
+              </div>
+            )}
+
+            {/* Menopause */}
+            {biomarkersComplete && (
+              <div>
+                <RowLabel>閉経状況</RowLabel>
+                <SegBtn options={["閉経前","閉経後"]} value={menopause} onChange={setMenopause} />
+              </div>
+            )}
+
+            {/* Primary treatment */}
+            {biomarkersComplete && !isM1 && (
+              <div>
+                <RowLabel>初回治療方針</RowLabel>
+                <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                  <button onClick={()=>setPrimaryTx(primaryTx==="手術"?null:"手術")} style={{
+                    padding:"8px 18px", borderRadius:8,
+                    border:primaryTx==="手術"?"2px solid #1a5fa8":"2px solid #d4dae4",
+                    background:primaryTx==="手術"?"#1a5fa8":"#fff", color:primaryTx==="手術"?"#fff":"#444",
+                    fontSize:13, fontWeight:primaryTx==="手術"?700:500, cursor:"pointer",
+                  }}>手術（先行）</button>
+                  {showNeoAdj && (
+                    <button onClick={()=>setPrimaryTx(primaryTx==="術前化学療法"?null:"術前化学療法")} style={{
+                      padding:"8px 18px", borderRadius:8,
+                      border:primaryTx==="術前化学療法"?"2px solid #b03000":"2px solid #d4dae4",
+                      background:primaryTx==="術前化学療法"?"#b03000":"#fff",
+                      color:primaryTx==="術前化学療法"?"#fff":"#b03000",
+                      fontSize:13, fontWeight:primaryTx==="術前化学療法"?700:500, cursor:"pointer",
+                    }}>術前化学療法（ネオアジュバント）</button>
+                  )}
+                  {showNeoAdjHR && (
+                    <button onClick={()=>setPrimaryTx(primaryTx==="術前化学内分泌療法"?null:"術前化学内分泌療法")} style={{
+                      padding:"8px 18px", borderRadius:8,
+                      border:primaryTx==="術前化学内分泌療法"?"2px solid #6a1a8a":"2px solid #d4dae4",
+                      background:primaryTx==="術前化学内分泌療法"?"#6a1a8a":"#fff",
+                      color:primaryTx==="術前化学内分泌療法"?"#fff":"#6a1a8a",
+                      fontSize:13, fontWeight:primaryTx==="術前化学内分泌療法"?700:500, cursor:"pointer",
+                    }}>術前化学療法（HR+/HER2-）</button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Surgery */}
+            {biomarkersComplete && (
+              <div>
+                <RowLabel>乳房手術術式</RowLabel>
+                {isM1 ? (
+                  <button style={{ padding:"7px 18px", borderRadius:8, border:"2px solid #8b0000", background:"#8b0000", color:"#fff", fontSize:13, fontWeight:700, cursor:"default" }}>非手術（薬物療法）</button>
+                ) : (
+                  <SegBtn options={["温存","全摘","未決定"]} value={surgery} onChange={setSurgery} />
+                )}
+              </div>
+            )}
+
+            {/* Lymph node */}
+            {biomarkersComplete && !isM1 && (
+              <div>
+                <RowLabel>リンパ節処理</RowLabel>
+                <div style={{ display:"flex", gap:7, flexWrap:"wrap" }}>
+                  {[
+                    { label:"センチネルリンパ節生検", val:"センチネル生検", color:"#1a5fa8" },
+                    { label:"腋窩リンパ節郭清", val:"腋窩郭清", color:"#883000" },
+                    { label:"生検＋郭清（両方）", val:"両方", color:"#6a006a" },
+                  ].map(({ label, val, color }) => (
+                    <button key={val} onClick={()=>setLymphNode(lymphNode===val?null:val)} style={{
+                      padding:"7px 14px", borderRadius:8,
+                      border:lymphNode===val?`2px solid ${color}`:"2px solid #d4dae4",
+                      background:lymphNode===val?color:"#fff", color:lymphNode===val?"#fff":"#555",
+                      fontSize:12, fontWeight:lymphNode===val?700:500, cursor:"pointer", whiteSpace:"nowrap",
+                    }}>{label}</button>
+                  ))}
+                </div>
+                {lymphNode && (
+                  <div style={{ marginTop:7, fontSize:11, lineHeight:1.75, padding:"8px 12px", borderRadius:7,
+                    background: lymphNode==="センチネル生検"?"#f4f8ff": lymphNode==="腋窩郭清"?"#fff5f0":"#f8f0ff",
+                    border: lymphNode==="センチネル生検"?"1px solid #d0e4f8": lymphNode==="腋窩郭清"?"1px solid #f0c8b0":"1px solid #e0c0f0",
+                    color: lymphNode==="センチネル生検"?"#334488": lymphNode==="腋窩郭清"?"#883000":"#552266",
+                  }}>
+                    {lymphNode === "センチネル生検" && "腋窩に最初に流れる「見張りリンパ節」を手術中に取り出して調べます。転移がなければ郭清は省略できます（リンパ浮腫リスク約5%）。"}
+                    {lymphNode === "腋窩郭清" && "腋窩のリンパ節を広範囲に取り除きます。リンパ浮腫（腕のむくみ）のリスクがあります（15〜25%）。術後リハビリテーションが重要です。"}
+                    {lymphNode === "両方" && "センチネルリンパ節生検を行い、術中迅速病理で転移が確認された場合に続けて腋窩リンパ節郭清を行います。"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {hasInput && (
+              <div style={{ textAlign:"right" }}>
+                <button onClick={handleReset} className="no-print" style={{ padding:"5px 16px", borderRadius:20, border:"1px solid #d0d0d0", background:"#fff", color:"#999", fontSize:12, cursor:"pointer" }}>リセット</button>
+              </div>
+            )}
+
+            {/* Treatment direction */}
+            {treatment && biomarkersComplete && (
+              <>
+                <Divider title="治療の方向性（参考）" />
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                  {treatment.map((sec,i)=>(
+                    <div key={i} style={{ background:"#f8faff", borderRadius:8, padding:"10px 12px", border:"1px solid #e8eef8" }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:"#334", marginBottom:6 }}>{sec.cat}</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                        {sec.items.map((item,j)=>(
+                          <div key={j} style={{ display:"flex", gap:6, alignItems:"flex-start" }}>
+                            <span style={{ color:"#1a5fa8", fontSize:11, marginTop:2, flexShrink:0 }}>▸</span>
+                            <span style={{ fontSize:12, color:"#333", lineHeight:1.7, whiteSpace:"pre-line" }}>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize:10, color:"#bbb", borderTop:"1px solid #f0f0f0", paddingTop:8, lineHeight:1.8 }}>
+                  治療方針の最終決定は腫瘍内科・集学的カンファレンスでの判断を優先してください。
+                </div>
+              </>
+            )}
+
+            {/* ── 5年PFSパネル ── */}
+            {showPfs && (
+              <>
+                <Divider title="5年PFS 推定値（治療別）" />
+                <PfsPanel anat={anat} subtype={subtype} />
+              </>
+            )}
+
+            {/* Treatment schedule */}
+            {showSchedule && (
+              <TreatmentScheduleTable
+                primaryTx={primaryTx} subtype={subtype}
+                surgery={surgery} lymphNode={lymphNode} menopause={menopause}
+              />
+            )}
+
+            {/* Print button */}
+            {treatment && biomarkersComplete && (
+              <button
+                className="no-print"
+                onClick={()=>window.print()}
+                style={{
+                  marginTop:8, padding:"12px", borderRadius:10, border:"none",
+                  background:"linear-gradient(135deg, #2a7a4a 0%, #3a9a5a 100%)",
+                  color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                  boxShadow:"0 3px 10px rgba(42,122,74,0.3)",
+                }}>
+                🖨️ 印刷 / PDF で保存
+              </button>
+            )}
+
+          </div>
+        </div>
+
+        <div style={{ marginTop:10, fontSize:10, color:"#bbb", textAlign:"center", lineHeight:1.8 }} className="no-print">
+          解剖学的ステージ ＋ Prognostic Stage（AJCC 8th）<br/>
+          Oncotype DX 等ゲノム検査による補正は含みません。
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+<script>
+/* PWA: Service Worker登録（Reactの初期化は上記babelブロックで完了済み・削除しないこと） */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js')
+      .catch(function (e) { console.log('SW registration failed:', e); });
+  });
+}
+</script>
+</body>
+</html>
