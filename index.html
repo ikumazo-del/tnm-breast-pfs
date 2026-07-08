@@ -212,6 +212,53 @@ const PFS_DATA = {
   },
 };
 
+// ── 閉経前 HR+/HER2- 専用 予後データ（PfsPanelで preMeno 時に PFS_DATA を丸ごと差し替え）──────
+//  設計原則: 閉経前ではAIは単独使用せずOFS併用が前提（SOFT/TEXT）。ゆえにAI単独項は本枝に存在しない。
+//  数値は Pagani, SOFT/TEXT, NEJM 2014（併合5年DFS）の確定値のみを trial 配置。
+//    全体 91.1/87.3（E+OFS / TAM+OFS, HR 0.72）｜N陰性 95.1/91.6｜N陽性 85.6/81.4
+//  病期別の絶対値は原著に無いため、N状態で近似（IA/IB=N陰性, IIA=全体, IIB以上=N陽性）。III期はフラット＋注記。
+//  ★IwaoK確認事項: ①IA/IBの「TAM単独」低リスク値は Francis SOFT 2015（指標=無乳がん率）。②IIB以降のフラット表示の可否。
+const PFS_DATA_PREMENO = {
+  "HR+/HER2-": {
+    "IA": [
+      { label:"手術 ＋ タモキシフェン単独 5年（閉経前・低リスク標準）", pfs:95.8, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 95.8%（TAM単独）｜指標=無乳がん率" },
+      { label:"手術 ＋ タモキシフェン ＋ 卵巣機能抑制(OFS) 5年", pfs:95.1, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 95.1%（TAM+OFS）｜指標=無乳がん率" },
+      { label:"手術 ＋ エキセメスタン ＋ 卵巣機能抑制(OFS) 5年", pfs:97.1, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 97.1%（E+OFS）｜指標=無乳がん率" },
+    ],
+    "IB": [
+      { label:"手術 ＋ タモキシフェン単独 5年（低リスク標準・pN1mi含む）", pfs:95.8, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 95.8%（TAM単独）｜指標=無乳がん率、pN1miは低リスク系として近似" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS 5年", pfs:95.1, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 95.1%（TAM+OFS）｜指標=無乳がん率" },
+      { label:"手術 ＋ エキセメスタン ＋ OFS 5年", pfs:97.1, type:"trial", tp:"5年", source:"Francis, SOFT, NEJM 2015 化学療法なしコホート 5y 無乳がん率 97.1%（E+OFS）｜指標=無乳がん率" },
+    ],
+    "IIA": [
+      { label:"手術 ＋ エキセメスタン ＋ OFS 5年（全体）", pfs:91.1, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 91.1%（E+OFS, HR 0.72 vs TAM+OFS）" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS 5年（全体）", pfs:87.3, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 87.3%（TAM+OFS）" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜閉経前ETはOFS基盤" },
+    ],
+    "IIB": [
+      { label:"手術 ＋ エキセメスタン ＋ OFS 5年（N陽性）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS 5年（N陽性）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET; 閉経前ETはOFS基盤）" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（孫引き）｜閉経前ETはOFS基盤" },
+    ],
+    "IIIA": [
+      { label:"手術 ＋ エキセメスタン ＋ OFS（N陽性例の試験値）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）｜※病期別の絶対値は原著になし" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS（N陽性例の試験値）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）｜※病期別の絶対値は原著になし" },
+      { label:"化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（病期別値ではなくITT）｜閉経前ETはOFS基盤" },
+    ],
+    "IIIB": [
+      { label:"手術 ＋ エキセメスタン ＋ OFS（N陽性例の試験値）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）｜※病期別の絶対値は原著になし" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS（N陽性例の試験値）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）｜※病期別の絶対値は原著になし" },
+      { label:"術前化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（病期別値ではなくITT）｜閉経前ETはOFS基盤" },
+    ],
+    "IIIC": [
+      { label:"手術 ＋ エキセメスタン ＋ OFS（N陽性例の試験値）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）｜※病期別の絶対値は原著になし（N3高リスクでは下振れ）" },
+      { label:"手術 ＋ タモキシフェン ＋ OFS（N陽性例の試験値）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）｜※病期別の絶対値は原著になし（N3高リスクでは下振れ）" },
+      { label:"術前化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（病期別値ではなくITT）｜閉経前ETはOFS基盤" },
+    ],
+  },
+};
+
 // ── ステージ関数 ──
 function getAnatomical(t, n, m) {
   if (!t || !n || !m) return null;
@@ -399,6 +446,8 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
     postMeno ? "アロマターゼ阻害薬（レトロゾール等）5〜10年"
     : preMeno ? "タモキシフェン 5〜10年（閉経前標準）\n高リスク例：卵巣機能抑制(OFS：LH-RHアゴニスト)＋タモキシフェン または AI（SOFT/TEXT）"
     : "閉経状況により選択：閉経後=AI／閉経前=タモキシフェン±卵巣機能抑制(OFS)";
+  // アベマシクリブ(monarchE)はHR+/HER2-限定。HER2陽性(monarchE除外)には付与しない。
+  const abemaAdd = subtype === "HR+/HER2-" ? "\n高リスク：アベマシクリブ2年追加" : "";
   const rows = [];
 
   if (isNeoAdjHR) {
@@ -406,7 +455,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
     rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
     rows.push({ phase:"術前内分泌療法（追加時）", period:"化学療法終了後 2〜4か月", content:(postMeno ? "アロマターゼ阻害薬（レトロゾール等）" : "LH-RHアゴニスト＋タモキシフェン等") + "\n※化学療法単独で手術の場合もあり", color:"#f3e8fb" });
     rows.push({ phase:"手術", period:"術前治療終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
-    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）\n高リスク：アベマシクリブ2年追加" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）\n高リスク：アベマシクリブ2年追加" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:(postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）") + abemaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射\n断端陽性・リスク高：追加照射", color:"#fff8e1" });
   } else if (isNeoAdj) {
     if (isHER2) {
@@ -426,7 +475,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続", color:"#fdeaea" });
     }
-    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + "\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   } else if (surgery === "非手術（薬物療法）") {
     if (subtype === "HR+/HER2-") {
@@ -445,13 +494,13 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
     rows.push({ phase:"症状緩和ケア", period:"治療中〜継続", content:"疼痛・倦怠感・浮腫などの症状コントロール\n緩和ケアチームと連携", color:"#f0f8f0" });
   } else {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
-    if (!isHR || isTNBC) {
+    if (subtype !== "HR+/HER2-") {
       rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : isTNBC ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
     } else {
       rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
     }
     if (isHER2) rows.push({ phase:"術後抗HER2療法", period:"合計1年", content:"トラスツズマブ（＋ペルツズマブ）", color:"#e8f7ee" });
-    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + "\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + abemaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   }
 
@@ -468,7 +517,9 @@ function PfsPanel({ anat, subtype, menopause }) {
   // 閉経状態フラグ（Unit 2で閉経前HR+レジメンの出し分けに使用）
   const preMeno  = menopause === "閉経前";
   const postMeno = menopause === "閉経後";
-  const data = PFS_DATA[subtype]?.[anat];
+  // 閉経前 HR+/HER2- は専用データ（OFS基盤）に丸ごと差し替え。該当なければ通常データ。
+  const usePremeno = preMeno && subtype === "HR+/HER2-" && !!PFS_DATA_PREMENO[subtype]?.[anat];
+  const data = usePremeno ? PFS_DATA_PREMENO[subtype][anat] : PFS_DATA[subtype]?.[anat];
   if (!data || data.length === 0) return null;
 
   const maxPfs = 100;
@@ -500,6 +551,12 @@ function PfsPanel({ anat, subtype, menopause }) {
             borderRadius:4, padding:"1px 6px", fontWeight:600 }}>
             Stage {anat} / {subtype}
           </span>
+          {usePremeno && (
+            <span style={{ fontSize:10, background:"rgba(255,205,130,0.30)", color:"#ffe4ad",
+              borderRadius:4, padding:"1px 6px", fontWeight:700 }}>
+              閉経前・OFS基盤
+            </span>
+          )}
         </div>
         <span style={{ fontSize:12, color:"#aaccee" }}>{expanded ? "▲ 閉じる" : "▼ 開く"}</span>
       </div>
