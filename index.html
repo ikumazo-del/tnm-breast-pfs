@@ -393,6 +393,12 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
   const hasSLNB    = lymphNode === "センチネル生検" || lymphNode === "両方";
   const isBreastCon = surgery === "温存";
   const postMeno   = menopause === "閉経後";
+  const preMeno    = menopause === "閉経前";
+  // 内分泌療法の中身（閉経状態で分岐しOFSを整合。閉経前にAI単独を出さない＝層①getTreatmentと一致）
+  const etAdjContent =
+    postMeno ? "アロマターゼ阻害薬（レトロゾール等）5〜10年"
+    : preMeno ? "タモキシフェン 5〜10年（閉経前標準）\n高リスク例：卵巣機能抑制(OFS：LH-RHアゴニスト)＋タモキシフェン または AI（SOFT/TEXT）"
+    : "閉経状況により選択：閉経後=AI／閉経前=タモキシフェン±卵巣機能抑制(OFS)";
   const rows = [];
 
   if (isNeoAdjHR) {
@@ -400,7 +406,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
     rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
     rows.push({ phase:"術前内分泌療法（追加時）", period:"化学療法終了後 2〜4か月", content:(postMeno ? "アロマターゼ阻害薬（レトロゾール等）" : "LH-RHアゴニスト＋タモキシフェン等") + "\n※化学療法単独で手術の場合もあり", color:"#f3e8fb" });
     rows.push({ phase:"手術", period:"術前治療終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
-    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）\n高リスク：アベマシクリブ2年追加" : "タモキシフェン または アロマターゼ阻害薬\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）\n高リスク：アベマシクリブ2年追加" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）\n高リスク：アベマシクリブ2年追加" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射\n断端陽性・リスク高：追加照射", color:"#fff8e1" });
   } else if (isNeoAdj) {
     if (isHER2) {
@@ -420,7 +426,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続", color:"#fdeaea" });
     }
-    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:"タモキシフェン または アロマターゼ阻害薬\n（閉経状況により選択）\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + "\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   } else if (surgery === "非手術（薬物療法）") {
     if (subtype === "HR+/HER2-") {
@@ -445,7 +451,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
       rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
     }
     if (isHER2) rows.push({ phase:"術後抗HER2療法", period:"合計1年", content:"トラスツズマブ（＋ペルツズマブ）", color:"#e8f7ee" });
-    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:"タモキシフェン または アロマターゼ阻害薬\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + "\n高リスク：アベマシクリブ2年追加", color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   }
 
@@ -456,9 +462,12 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
 }
 
 // ── 5年PFSパネル ──────────────────────────────────────────────────────
-function PfsPanel({ anat, subtype }) {
+function PfsPanel({ anat, subtype, menopause }) {
   const [expanded, setExpanded] = useState(true);
   if (!anat || !subtype || anat === "invalid" || anat === "IV" || anat === "0") return null;
+  // 閉経状態フラグ（Unit 2で閉経前HR+レジメンの出し分けに使用）
+  const preMeno  = menopause === "閉経前";
+  const postMeno = menopause === "閉経後";
   const data = PFS_DATA[subtype]?.[anat];
   if (!data || data.length === 0) return null;
 
@@ -485,7 +494,7 @@ function PfsPanel({ anat, subtype }) {
       >
         <div style={{ display:"flex", alignItems:"center", gap:8 }}>
           <span style={{ fontSize:13, fontWeight:800, color:"#fff", letterSpacing:"0.03em" }}>
-            📊 5年PFS（無増悪生存率）— 治療別比較
+            📊 治療別の予後（再発・死亡なく経過する割合）
           </span>
           <span style={{ fontSize:10, background:"rgba(255,255,255,0.18)", color:"#ddeeff",
             borderRadius:4, padding:"1px 6px", fontWeight:600 }}>
@@ -507,7 +516,8 @@ function PfsPanel({ anat, subtype }) {
             marginBottom:14, lineHeight:1.7,
           }}>
             ⚠️ <b>参考値</b>：主要RCT（以下に出典を記載）の報告値をベースにした推定値です。欧米試験データが中心のため日本人での値と乖離する可能性があります。
-            個々の患者さんの状況・合併症・全身状態・PS等により大きく異なります。臨床判断の参考としてご使用ください。
+            個々の患者さんの状況・合併症・全身状態・PS等により大きく異なります。臨床判断の参考としてご使用ください。<br />
+            📅 <b>指標と時点は各項の出典に明記</b>（iDFS／DFS／EFS等）。原則5年ですが、試験により3年・7年・8年の値を用いています。異なる時点・集団の数値どうしは直接比較できません。
           </div>
 
           {/* 凡例 */}
@@ -545,6 +555,12 @@ function PfsPanel({ anat, subtype }) {
                         <span style={{ marginLeft:6, fontSize:10, background:"#2a6aaa", color:"#fff",
                           borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>
                           RCT
+                        </span>
+                      )}
+                      {item.tp && (
+                        <span style={{ marginLeft:6, fontSize:10, background:"#eef2f8", color:"#40608a",
+                          border:"1px solid #cdd8e8", borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>
+                          {item.tp}
                         </span>
                       )}
                     </div>
@@ -1085,8 +1101,8 @@ function App() {
             {/* ── 5年PFSパネル ── */}
             {showPfs && (
               <>
-                <Divider title="5年PFS 推定値（治療別）" />
-                <PfsPanel anat={anat} subtype={subtype} />
+                <Divider title="治療別の予後（時点は各項に明記）" />
+                <PfsPanel anat={anat} subtype={subtype} menopause={menopause} />
               </>
             )}
 
