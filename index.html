@@ -338,7 +338,8 @@ function isOncotypeDxEligible(subtype, n, nCount) {
 }
 
 function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx) {
-  if (!anat || anat === "invalid" || !subtype) return null;
+  if (!anat || anat === "invalid") return null;
+  if (anat !== "0" && !subtype) return null;   // DCIS(0)はsubtype未確定（=バイオマーカー未測定）でも治療を出す（v2.0.9）
   const isAdv = anat === "IV";
   const isHighRisk = ["IIA","IIB","IIIA","IIIB","IIIC"].includes(anat);
   const nPos = isNPlus(n);
@@ -351,11 +352,12 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
     if (surgery === "温存") items.push("放射線療法（温存後：残存乳房照射）");
     return [
       { cat:"局所療法", items },
-      ...(isLuminal ? [{ cat:"内分泌療法", items:[
+      // DCISはバイオマーカー非依存: isLuminalゲートを外し無条件で内分泌療法を候補表示（v2.0.9・IwaoK合意済）
+      { cat:"内分泌療法", items:[
         preMeno  ? "タモキシフェン（5年間、再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません"
         : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（5年間、再発リスク低減）"
         : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択・5年間）"
-      ] }] : []),
+      ] },
     ];
   }
 
@@ -497,7 +499,8 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   if (anat === "0") {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術（温存または全摘）"}${hasSLNB ? "\n±センチネルリンパ節生検" : ""}`, color:"#fef3e2" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射（再発リスク低減）", color:"#fff8e1" });
-    if (isLuminal) rows.push({ phase:"内分泌療法", period:"術後〜5年", content:(preMeno ? "タモキシフェン（ER陽性DCISの再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません" : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（ER陽性DCISの再発リスク低減）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）"), color:"#f3e8fb" });
+    // DCISはバイオマーカー非依存: isLuminalゲートを外し無条件で内分泌療法行を出す。ER陽性の断定も外す（v2.0.9・IwaoK合意済）
+    rows.push({ phase:"内分泌療法", period:"術後〜5年", content:(preMeno ? "タモキシフェン（DCISの再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません" : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（DCISの再発リスク低減）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）"), color:"#f3e8fb" });
     rows.push({ phase:"定期フォロー", period:"治療中〜以降", content:"定期診察・マンモグラフィ等の画像検査", color:"#f5f5f5" });
     return rows;
   }
@@ -1116,21 +1119,28 @@ function App() {
             {allTNM && anat !== "invalid" && (
               <>
                 <Divider title="バイオマーカー" />
-                <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                  <PlusMinus label="ER" value={er} onChange={setEr} />
-                  <PlusMinus label="PgR" value={pr} onChange={setPr} />
-                  <PlusMinus label="HER2" value={her2} onChange={setHer2} />
+                {anat === "0" && (
+                  <div style={{ fontSize:12, color:"#8a6d3b", background:"#fcf8e3", border:"1px solid #faebcc", borderRadius:6, padding:"6px 10px", marginBottom:6 }}>
+                    DCIS（非浸潤癌）では、バイオマーカーは治療方針に影響しません。内分泌療法は閉経状況で決まります（参考入力は可能ですが結果は変わりません）。
+                  </div>
+                )}
+                <div style={ anat === "0" ? { opacity:0.45, pointerEvents:"none" } : undefined }>
+                  <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                    <PlusMinus label="ER" value={er} onChange={setEr} />
+                    <PlusMinus label="PgR" value={pr} onChange={setPr} />
+                    <PlusMinus label="HER2" value={her2} onChange={setHer2} />
+                  </div>
+                  <div>
+                    <RowLabel>Grade（核グレード）</RowLabel>
+                    <SegBtn options={["1","2","3","未施行"]} value={grade} onChange={setGrade} small />
+                  </div>
+                  <Ki67Slider value={ki67} onChange={setKi67} />
                 </div>
-                <div>
-                  <RowLabel>Grade（核グレード）</RowLabel>
-                  <SegBtn options={["1","2","3","未施行"]} value={grade} onChange={setGrade} small />
-                </div>
-                <Ki67Slider value={ki67} onChange={setKi67} />
               </>
             )}
 
             {/* Oncotype DX */}
-            {biomarkersComplete && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
+            {biomarkersComplete && anat !== "0" && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
               <div>
                 <RowLabel>Oncotype DX（術前は医療保険未承認）</RowLabel>
                 <SegBtn options={["低リスク","中リスク","高リスク","未施行"]} value={oncotype} onChange={setOncotype} small />
