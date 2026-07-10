@@ -351,7 +351,11 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
     if (surgery === "温存") items.push("放射線療法（温存後：残存乳房照射）");
     return [
       { cat:"局所療法", items },
-      ...(isLuminal ? [{ cat:"内分泌療法", items:["タモキシフェン または AI（5年間、再発リスク低減）"] }] : []),
+      ...(isLuminal ? [{ cat:"内分泌療法", items:[
+        preMeno  ? "タモキシフェン（5年間、再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません"
+        : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（5年間、再発リスク低減）"
+        : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択・5年間）"
+      ] }] : []),
     ];
   }
 
@@ -389,6 +393,11 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
 
   if (subtype === "HR+/HER2-") {
     const abema = isAbemaciclib(n, nCount, t, grade);
+    // 【v2.0.8】Ki-67(増殖能)をロジックに配線。閾値は施設基準で調整可（St.Gallen系は14-20%、本邦は20-30%も）。
+    const KI67_HIGH = 20, KI67_LOW = 10;   // ★施設基準に合わせて変更する箇所
+    const ki67v = Number(ki67);
+    const ki67High = Number.isFinite(ki67v) && ki67v >= KI67_HIGH;   // Luminal B様
+    const ki67Low  = Number.isFinite(ki67v) && ki67v <= KI67_LOW;    // Luminal A様
     const etItems = postMeno
       ? ["アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）5〜10年"]
       : preMeno
@@ -398,9 +407,12 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
     if (abema) {
       const why = isN4plus(n, nCount) ? "N4個以上" : grade === "3" ? "N1-3個＋Grade3" : "N1-3個＋腫瘍径≥5cm";
       etItems.push(`アベマシクリブ（ベージニオ）＋ 内分泌療法 2年：再発高リスク（${why}、monarchE基準）`);
-    } else if (nPos && isN1to3(n, nCount)) {
-      etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
     }
+    // 【v2.0.8方針変更】非適応(N1-3・Grade1/2・T2以下)では薬剤名を出さない＝説明書原案での誤解回避。
+    // 以前は下記の教育的注意書きを表示していた（痕跡として残置）：
+    // else if (nPos && isN1to3(n, nCount)) {
+    //   etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
+    // }
     if (nPos) etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
     if (nPos && isHighRisk) etItems.push("オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・N1以上高リスク例（OlympiA試験）※ BRCA検査が必要");
     res.push({ cat:"内分泌療法 ＋ 補助薬物療法", items:etItems });
@@ -419,7 +431,13 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
     if (["T2","T3","T4"].includes(t)) {
       res.push({ cat:"術前化学療法（ネオアジュバント）の候補", items:["HR+/HER2-のT2以上では術前化学療法を選択することがあります","EC療法（エピルビシン＋シクロホスファミド）→ パクリタキセルが基本レジメン","※「初回治療方針」で「術前化学療法（HR+/HER2-）」を選択すると治療スケジュールが表示されます"]});
     }
-    if (isHighRisk || oncotype === "高リスク") {
+    // 【v2.0.8】Ki-67(増殖能)を治療判断に反映（従来はデッドパラメータだった）
+    if (ki67High) {
+      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67高値（${ki67v}%／当施設基準 ≥${KI67_HIGH}%）：Luminal B様。化学療法の上乗せを考慮`] });
+    } else if (ki67Low) {
+      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67低値（${ki67v}%／当施設基準 ≤${KI67_LOW}%）：Luminal A様。内分泌療法主体（化学療法省略を考慮）`] });
+    }
+    if (isHighRisk || oncotype === "高リスク" || ki67High) {
       res.push({ cat:"化学療法（術後・高リスク例）", items:["AC→T（アンスラサイクリン→タキサン）、TC 等"] });
     }
   }
@@ -469,13 +487,17 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   const abemaAdd = (subtype === "HR+/HER2-" && isAbemaciclib(n, nCount, t, grade))
     ? "\n高リスク：アベマシクリブ2年追加（monarchE基準）"
     : "";
+  // 【v2.0.8】S-1をスケジュールにも配線（説明文getTreatmentとの非対称を解消）。HR+/HER2-・N1以上のみ。
+  const s1Add = (subtype === "HR+/HER2-" && isNPlus(n))
+    ? "\n中〜高リスク（N1以上）：TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 追加を考慮（POTENT試験）"
+    : "";
   const rows = [];
 
   // ── DCIS(0)非浸潤がん分岐: 手術＋（温存なら放射線）＋（Luminalなら内分泌）のみ。術後化学・抗HER2は出さない ──
   if (anat === "0") {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術（温存または全摘）"}${hasSLNB ? "\n±センチネルリンパ節生検" : ""}`, color:"#fef3e2" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射（再発リスク低減）", color:"#fff8e1" });
-    if (isLuminal) rows.push({ phase:"内分泌療法", period:"術後〜5年", content:"タモキシフェン または アロマターゼ阻害薬（ER陽性DCISの再発リスク低減）", color:"#f3e8fb" });
+    if (isLuminal) rows.push({ phase:"内分泌療法", period:"術後〜5年", content:(preMeno ? "タモキシフェン（ER陽性DCISの再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません" : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（ER陽性DCISの再発リスク低減）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）"), color:"#f3e8fb" });
     rows.push({ phase:"定期フォロー", period:"治療中〜以降", content:"定期診察・マンモグラフィ等の画像検査", color:"#f5f5f5" });
     return rows;
   }
@@ -485,7 +507,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
     rows.push({ phase:"術前内分泌療法（追加時）", period:"化学療法終了後 2〜4か月", content:(postMeno ? "アロマターゼ阻害薬（レトロゾール等）" : "LH-RHアゴニスト＋タモキシフェン等") + "\n※化学療法単独で手術の場合もあり", color:"#f3e8fb" });
     rows.push({ phase:"手術", period:"術前治療終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
-    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:(postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）") + abemaAdd, color:"#f3e8fb" });
+    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:(postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）") + abemaAdd + s1Add, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射\n断端陽性・リスク高：追加照射", color:"#fff8e1" });
   } else if (isNeoAdj) {
     if (isHER2) {
@@ -505,7 +527,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続", color:"#fdeaea" });
     }
-    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd, color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd + s1Add, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   } else if (surgery === "非手術（薬物療法）") {
     if (subtype === "HR+/HER2-") {
@@ -530,7 +552,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
       rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
     }
     if (isHER2) rows.push({ phase:"術後抗HER2療法", period:"合計1年", content:"トラスツズマブ（＋ペルツズマブ）", color:"#e8f7ee" });
-    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + abemaAdd, color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + abemaAdd + s1Add, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   }
 
