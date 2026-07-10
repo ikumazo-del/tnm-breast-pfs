@@ -88,19 +88,19 @@ const PFS_DATA = {
     "IIA": [
       { label:"手術 ＋ AI（アロマターゼ阻害薬）5年", pfs:90, type:"est", source:"ATAC/BIG1-98全体解析より調整" },
       { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:89, type:"est", source:"EBCTCG 2018メタ解析参照" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜N1以上で表示" },
       { label:"手術 ＋ タモキシフェン 5年", pfs:87, type:"est", source:"ATAC/BIG1-98対照群調整" },
     ],
     "IIB": [
       { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:83, type:"est", source:"EBCTCG / SEER統計調整" },
       { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET, HR 0.680）" },
       { label:"手術 ＋ ET単独（病期別按分）", pfs:80, type:"est", source:"按分: e_IIIA(1-0.76=0.24)÷monarchE N2/N1比1.176→IIB(N1相当)S≈80｜アンカー Rastogi monarchE JCO 2024 ITT対照(IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"trial", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（孫引き）" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（孫引き・原著未入手）｜③型偽装是正: trial→est（POTENT孫引きにつき試験値ラベルを外す）｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:84, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 5y iDFS 83.6%(Stage IIIA相当)→84｜type:est" },
       { label:"化学療法 ＋ 手術 ＋ ET（monarchE対照）", pfs:76, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT対照(Stage IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", source:"Toi POTENT Lancet Oncol 2021 5y iDFS 87%基準(孫引き)・N+高Stage按分｜type:est" },
+      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", req:{nPlus:true}, source:"Toi POTENT Lancet Oncol 2021 5y iDFS 87%基準(孫引き)・N+高Stage按分｜type:est｜N1以上で表示" },
     ],
     "IIIB": [
       { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:80, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIB按分80｜type:est" },
@@ -131,6 +131,7 @@ const PFS_DATA = {
       { label:"術前HP＋化学療法→pCR→トラスツズマブ継続（1年完遂）", pfs:96, type:"est", source:"アンカー pCR後5y RFS上限96%(MD Anderson 229例等)→ShortHER勾配0.4圧縮でIIB≈96｜type:est・指標RFS/EFS混在注記" },
       { label:"術前HP→non-pCR→T-DM1（KATHERINE）", pfs:80.8, type:"trial", source:"Geyer KATHERINE NEJM 2025 7y iDFS 80.8%(T-DM1, ITT)｜按分アンカー｜参考: 残存≤1cm・N0 85.7%, IHC3+ 82.8%" },
       { label:"術前HP→non-pCR→トラスツズマブ継続（KATHERINE対照）", pfs:67.1, type:"trial", source:"Geyer KATHERINE NEJM 2025 7y iDFS 67.1%(トラスツズマブ, ITT)｜按分アンカー｜参考: 残存≤1cm・N0 76.7%, IHC3+ 66.5%" },
+      { label:"単剤トラスツズマブ（1年・ペルツズマブ非併用）", pfs:82, type:"est", tag:"別枠", source:"②ペルツズマブ非併用オプション。HERA/APT準拠。旧値82はHERA広域集団由来の病期非特異値（孫引き・IIB特異値ではない）。HERA最終10y DFS 69%(1年群)/63%(観察)・HR 0.76〔Cameron Lancet 2017・web確認〕。低リスクN0はAPT 10y RFI 96.8%〔Tolaney Lancet Oncol 2023〕。type:est・病期非特異につき参考" },
     ],
     "IIIA": [
       { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ（HP・手術先行）", pfs:82, type:"est", source:"按分: e_IIB(0.12)×ShortHER IIIA/IIB比1.472→S≈82｜アンカー APHINITY N+ 88%｜type:est" },
@@ -162,23 +163,25 @@ const PFS_DATA = {
       { label:"術前HP＋化学療法→pCR→トラスツズマブ継続 ＋ ET（1年完遂）", pfs:97, type:"est", source:"pCR達成はHR状態を超える最強予後因子｜HER2+(HR-) pCR値97%を援用、ET上乗せは上限効果で実質同等｜type:est・指標RFS/EFS混在注記" },
     ],
     "IIB": [
-      { label:"化学療法 ＋ トラスツズマブ ＋ ET", pfs:82, type:"est", source:"HERA Stage IIB推定 + ET" },
       { label:"化学療法 ＋ トラスツズマブ ＋ ペルツズマブ ＋ ET（APHINITY N+）", pfs:88, type:"est", source:"Piccart, APHINITY, JCO 2021 N+ 6y 88%(HP) + ET推定" },
       { label:"術前HP＋化学療法→pCR→トラスツズマブ継続 ＋ ET（1年完遂）", pfs:96, type:"est", source:"pCR達成はHR状態を超える最強予後因子｜HER2+(HR-) pCR値96%を援用、ET上乗せは上限効果で実質同等｜type:est・指標RFS/EFS混在注記" },
-      { label:"術前HP→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:84, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%基準 + ET推定" },
+      { label:"術前HP→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:84, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y iDFS 80.8%基準（T-DM1）｜①本値はHR陽性例にET併用した集団の成績を反映（ET込み）。ETの上乗せ幅を分離測定したRCTは存在しないため別途加算していない｜type:est・指標混在の可能性" },
+      { label:"単剤トラスツズマブ ＋ ET（1年・ペルツズマブ非併用）", pfs:82, type:"est", tag:"別枠", source:"②HER2+と扱い統一。ペルツズマブ非併用オプション。HERA/APT準拠。旧値82はHERA広域集団由来の病期非特異値（孫引き）。①ET込み（上乗せ非加算）｜type:est・病期非特異につき参考" },
     ],
     "IIIA": [
       { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:90, type:"est", source:"III期pCR=90%フラット確定(HER2+ HR-と同方式)｜pCR達成はHR状態を超える最強予後因子、ET上乗せは上限効果で実質同等｜type:est・指標EFS/RFS混在注記" },
-      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:82, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y 80.8%基準 T-DM1 + ET推定" },
-      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ＋ET", pfs:68, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y 67.1%基準 対照 + ET推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET（KATHERINE）", pfs:82, type:"est", source:"Geyer, KATHERINE, NEJM 2025 7y 80.8%基準（T-DM1）｜①ET込み・上乗せ非加算（分離測定RCT非存在）｜type:est" },
+      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ継続 ＋ ET", pfs:68, type:"est", ref:true, source:"Geyer, KATHERINE, NEJM 2025 7y 67.1%基準（対照）｜①ET込み・上乗せ非加算｜④T継続列: T-DM1非適応時の選択肢｜⚠IIIAは+ET推定由来68でIIIB/IIIC新規列(HER2+HR-按分式39/24)と算出方式が異なる=要IwaoK統一判断｜type:est" },
     ],
     "IIIB": [
       { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:90, type:"est", source:"III期pCR=90%フラット確定(HER2+ HR-と同方式)｜pCR達成はHR状態を超える最強予後因子｜type:est・指標EFS/RFS混在注記" },
-      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:71, type:"est", source:"KATHERINE Stage IIIB推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:71, type:"est", source:"KATHERINE Stage IIIB推定｜①ET込み・上乗せ非加算（分離測定RCT非存在）｜type:est" },
+      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ継続 ＋ ET", pfs:39, type:"est", ref:true, source:"④4列統一: HER2+(HR-)按分式を横展開 [e_IIB(0.329)×ShortHER 1.850→39]｜根拠KATHERINE HR一貫(HR+ 0.48/HR- 0.50, Mamounas Ann Oncol 2021)につき集団混在の型偽装なし｜①ET込み・上乗せ非加算｜※T-DM1非適応時の選択肢｜type:est" },
     ],
     "IIIC": [
       { label:"術前HP＋化学療法→pCR→継続 ＋ ET", pfs:90, type:"est", source:"III期pCR=90%フラット確定(HER2+ HR-と同方式)｜pCR達成はHR状態を超える最強予後因子｜type:est・指標EFS/RFS混在注記" },
-      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:59, type:"est", source:"KATHERINE Stage IIIC推定" },
+      { label:"術前HP＋化学療法→non-pCR→T-DM1 ＋ ET", pfs:59, type:"est", source:"KATHERINE Stage IIIC推定｜①ET込み・上乗せ非加算（分離測定RCT非存在）｜type:est" },
+      { label:"術前HP＋化学療法→non-pCR→トラスツズマブ継続 ＋ ET ※参考値", pfs:24, type:"est", ref:true, source:"④4列統一: HER2+(HR-)按分式を横展開 [e_IIB(0.329)×ShortHER 2.323→24]｜根拠KATHERINE HR一貫｜①ET込み・上乗せ非加算｜※KATHERINE集団外(実質operable中心)につき高リスク域外挿=参考値｜※T-DM1非適応時の選択肢｜type:est・参考値" },
     ],
   },
   "TNBC": {
@@ -241,13 +244,13 @@ const PFS_DATA_PREMENO = {
     "IIA": [
       { label:"手術 ＋ エキセメスタン ＋ OFS 5年（全体）", pfs:91.1, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 91.1%（E+OFS, HR 0.72 vs TAM+OFS）" },
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（全体）", pfs:87.3, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 87.3%（TAM+OFS）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜閉経前ETはOFS基盤" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜閉経前ETはOFS基盤｜N1以上で表示" },
     ],
     "IIB": [
       { label:"手術 ＋ エキセメスタン ＋ OFS 5年（N陽性）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）" },
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（N陽性）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）" },
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET; 閉経前ETはOFS基盤）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（孫引き）｜閉経前ETはOFS基盤" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（孫引き）｜閉経前ETはOFS基盤｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"手術 ＋ エキセメスタン ＋ OFS（病期別按分）", pfs:83, type:"est", tp:"5年", source:"按分: e_IIB(1-0.856=0.144)×monarchE N2/N1比1.176→S≈83｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)85.6%(E+OFS)、勾配 monarchE Nサブグループ相対比のみ｜type:est・指標混在(DFS基準×iDFS勾配)" },
@@ -426,7 +429,14 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
       res.push({ cat:"薬物療法（術前推奨）", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）","術前でpCR未達の場合 → 術後 T-DM1（カドサイラ）に変更（KATHERINE 試験）"] });
     else
       res.push({ cat:"薬物療法", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）1年間","低リスク例（T1N0 等）：パクリタキセル ＋ トラスツズマブ も選択肢"] });
-    if (subtype === "HR+/HER2+") res.push({ cat:"内分泌療法", items:["ER/PR 陽性例には内分泌療法を追加"] });
+    if (subtype === "HR+/HER2+") {
+      const etDetail = postMeno
+        ? "アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）5〜10年"
+        : preMeno
+        ? "タモキシフェン 5〜10年（閉経前標準）／高リスク例：卵巣機能抑制（LH-RHアゴニスト）＋タモキシフェン または AI（SOFT/TEXT）"
+        : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）";
+      res.push({ cat:"内分泌療法（ER/PR陽性例に追加）", items:[etDetail, "※抗HER2療法（トラスツズマブ ± ペルツズマブ／T-DM1）と並行して実施します"] });
+    }
   }
 
   if (subtype === "TNBC") {
@@ -439,12 +449,13 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
 }
 
 // ── Treatment Schedule ────────────────────────────────────────────────
-function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
+function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade) {
   const isNeoAdj   = primaryTx === "術前化学療法";
   const isNeoAdjHR = primaryTx === "術前化学内分泌療法";
   const isHER2     = subtype === "HER2+" || subtype === "HR+/HER2+";
   const isHR       = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
   const isTNBC     = subtype === "TNBC";
+  const isLuminal  = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
   const hasSLNB    = lymphNode === "センチネル生検" || lymphNode === "両方";
   const isBreastCon = surgery === "温存";
   const postMeno   = menopause === "閉経後";
@@ -454,9 +465,20 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
     postMeno ? "アロマターゼ阻害薬（レトロゾール等）5〜10年"
     : preMeno ? "タモキシフェン 5〜10年（閉経前標準）\n高リスク例：卵巣機能抑制(OFS：LH-RHアゴニスト)＋タモキシフェン または AI（SOFT/TEXT）"
     : "閉経状況により選択：閉経後=AI／閉経前=タモキシフェン±卵巣機能抑制(OFS)";
-  // アベマシクリブ(monarchE)はHR+/HER2-限定。HER2陽性(monarchE除外)には付与しない。
-  const abemaAdd = subtype === "HR+/HER2-" ? "\n高リスク：アベマシクリブ2年追加" : "";
+  // アベマシクリブ(monarchE)はHR+/HER2-限定かつ高リスク(monarchE基準)のみ。HER2陽性・低リスク(IA〜IIBのN0/N1(1-3)非高リスク)には付与しない。
+  const abemaAdd = (subtype === "HR+/HER2-" && isAbemaciclib(n, nCount, t, grade))
+    ? "\n高リスク：アベマシクリブ2年追加（monarchE基準）"
+    : "";
   const rows = [];
+
+  // ── DCIS(0)非浸潤がん分岐: 手術＋（温存なら放射線）＋（Luminalなら内分泌）のみ。術後化学・抗HER2は出さない ──
+  if (anat === "0") {
+    rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術（温存または全摘）"}${hasSLNB ? "\n±センチネルリンパ節生検" : ""}`, color:"#fef3e2" });
+    if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射（再発リスク低減）", color:"#fff8e1" });
+    if (isLuminal) rows.push({ phase:"内分泌療法", period:"術後〜5年", content:"タモキシフェン または アロマターゼ阻害薬（ER陽性DCISの再発リスク低減）", color:"#f3e8fb" });
+    rows.push({ phase:"定期フォロー", period:"治療中〜以降", content:"定期診察・マンモグラフィ等の画像検査", color:"#f5f5f5" });
+    return rows;
+  }
 
   if (isNeoAdjHR) {
     rows.push({ phase:"術前化学療法", period:"第1〜12週（EC療法）", content:"EC療法（エピルビシン＋シクロホスファミド）\n3週毎4サイクル", color:"#e8f0fb" });
@@ -519,16 +541,30 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause) {
 }
 
 // ── 5年PFSパネル ──────────────────────────────────────────────────────
-function PfsPanel({ anat, subtype, menopause }) {
+function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, nCount, t, grade }) {
   const [expanded, setExpanded] = useState(true);
   if (!anat || !subtype || anat === "invalid" || anat === "IV" || anat === "0") return null;
   // 閉経状態フラグ（Unit 2で閉経前HR+レジメンの出し分けに使用）
   const preMeno  = menopause === "閉経前";
   const postMeno = menopause === "閉経後";
+  const menoUnset = !menopause;               // 7: 未選択時は閉経後に準拠
   // 閉経前 HR+/HER2- は専用データ（OFS基盤）に丸ごと差し替え。該当なければ通常データ。
   const usePremeno = preMeno && subtype === "HR+/HER2-" && !!PFS_DATA_PREMENO[subtype]?.[anat];
-  const data = usePremeno ? PFS_DATA_PREMENO[subtype][anat] : PFS_DATA[subtype]?.[anat];
-  if (!data || data.length === 0) return null;
+  const rawData = usePremeno ? PFS_DATA_PREMENO[subtype][anat] : PFS_DATA[subtype]?.[anat];
+  if (!rawData || rawData.length === 0) return null;
+
+  // ── 根っこ①: primaryTx/surgery/N を反映した表示制御 ──
+  const nPos = isNPlus(n);                                          // N1/N2/N3
+  const isSurgeryFirst = primaryTx === "手術";                       // 手術先行
+  const isIII = ["IIIA","IIIB","IIIC"].includes(anat);             // Swain分岐対象病期
+
+  // N条件フィルタ: req.nPlus の行（S-1等）はN+のときのみ表示（N0/低リスクで非表示）
+  const data = rawData.filter(item => !(item.req?.nPlus && !nPos));
+  if (data.length === 0) return null;
+
+  // 別枠タグ行（②単剤トラスツズマブ等）を主系列と分離
+  const mainRows = data.filter(it => it.tag !== "別枠");
+  const altRows  = data.filter(it => it.tag === "別枠");
 
   const maxPfs = 100;
 
@@ -537,6 +573,68 @@ function PfsPanel({ anat, subtype, menopause }) {
     if (v >= 75) return { bar:"linear-gradient(90deg,#3060aa,#4a80cc)", txt:"#2a508a" };
     if (v >= 60) return { bar:"linear-gradient(90deg,#8a5500,#bb8800)", txt:"#7a4a00" };
     return { bar:"linear-gradient(90deg,#992200,#cc3300)", txt:"#882200" };
+  };
+
+  // 1行ぶんのバー描画（主系列・別枠で共用）
+  const renderBar = (item, i, isAlt) => {
+    const { bar: barGrad, txt: txtCol } = pfsColor(item.pfs);
+    const barW = `${item.pfs}%`;
+    // pCR枝の術前後レジメン分岐（Swain 2022, 4y EFS）: III期pCR=90(PH→H既定)にH→H/PH→PH内訳を併記
+    const showSwain = isIII && item.label.includes("pCR") && item.pfs === 90;
+    // 術前療法系の行を手術先行で選んでいる場合の参考注記
+    const isNeoRow = item.label.includes("術前") || item.label.includes("pCR");
+    const showSurgeryFirstNote = isSurgeryFirst && isNeoRow;
+    return (
+      <div key={(isAlt?"a":"m")+i} style={{
+        background: isAlt ? "#fbf9f2" : "#fff",
+        border: item.type === "trial" ? "1.5px solid #bacede" : "1.5px dashed #ccd8e8",
+        borderRadius:8, padding:"9px 12px",
+        opacity: showSurgeryFirstNote ? 0.82 : 1,
+      }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:5 }}>
+          <div style={{ flex:1, paddingRight:10 }}>
+            <span style={{ fontSize:12, color:"#222", fontWeight:600, lineHeight:1.5 }}>{item.label}</span>
+            {item.type === "trial" && (
+              <span style={{ marginLeft:6, fontSize:10, background:"#2a6aaa", color:"#fff",
+                borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>RCT</span>
+            )}
+            {item.tp && (
+              <span style={{ marginLeft:6, fontSize:10, background:"#eef2f8", color:"#40608a",
+                border:"1px solid #cdd8e8", borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>{item.tp}</span>
+            )}
+            {item.ref && (
+              <span style={{ marginLeft:6, fontSize:10, background:"#fff3e0", color:"#9a5a00",
+                border:"1px solid #f0d0a0", borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>参考値</span>
+            )}
+            {isAlt && (
+              <span style={{ marginLeft:6, fontSize:10, background:"#efe7d8", color:"#7a5a2a",
+                border:"1px solid #ddc9a8", borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>別枠</span>
+            )}
+          </div>
+          <span style={{ fontSize:18, fontWeight:900, color:txtCol, minWidth:52, textAlign:"right", lineHeight:1 }}>
+            {item.pfs}<span style={{ fontSize:11, fontWeight:600 }}>%</span>
+          </span>
+        </div>
+        <div style={{ background:"#eaeff7", borderRadius:6, height:12, overflow:"hidden", marginBottom:4 }}>
+          <div className="pfs-bar" style={{ "--bar-w": barW, height:"100%", borderRadius:6, width: barW, background: barGrad }} />
+        </div>
+        {showSwain && (
+          <div style={{ fontSize:10, color:"#3a6a4a", background:"#eef7f0", border:"1px solid #cce4d4",
+            borderRadius:5, padding:"4px 8px", marginBottom:4, lineHeight:1.6 }}>
+            📎 <b>術前→術後レジメン別 内訳</b>（Swain 2022, Cancers 14:5051, 4y EFS・IPTW）：
+            H→H（術前T単剤→術後T単剤）<b>86%</b> ／ PH→H（術前HP→術後T単剤）<b>90%</b>（当既定値）／ PH→PH（術前HP→術後HP継続）<b>95%</b>
+            <br />※指標=4年EFS。他項のDFS/iDFS/無乳がん率とは直接比較不可。
+          </div>
+        )}
+        {showSurgeryFirstNote && (
+          <div style={{ fontSize:10, color:"#8a5a2a", background:"#fdf5e8", border:"1px solid #eddcc0",
+            borderRadius:5, padding:"4px 8px", marginBottom:4, lineHeight:1.6 }}>
+            ⚠️ 手術先行を選択中です。この行は術前療法（ネオアジュバント）を前提とした成績のため、参考としてご覧ください。
+          </div>
+        )}
+        <div style={{ fontSize:10, color:"#8899bb", lineHeight:1.5 }}>出典：{item.source}</div>
+      </div>
+    );
   };
 
   return (
@@ -582,8 +680,19 @@ function PfsPanel({ anat, subtype, menopause }) {
           }}>
             ⚠️ <b>参考値</b>：主要RCT（以下に出典を記載）の報告値をベースにした推定値です。欧米試験データが中心のため日本人での値と乖離する可能性があります。
             個々の患者さんの状況・合併症・全身状態・PS等により大きく異なります。臨床判断の参考としてご使用ください。<br />
-            📅 <b>指標と時点は各項の出典に明記</b>（iDFS／DFS／EFS等）。原則5年ですが、試験により3年・7年・8年の値を用いています。異なる時点・集団の数値どうしは直接比較できません。
+            📅 <b>指標と時点は各項の出典に明記</b>（iDFS／DFS／EFS等）。原則5年ですが、試験により3年・7年・8年の値を用いています。異なる時点・集団の数値どうしは直接比較できません。<br />
+            📌 各値は試験・観察時点・指標（DFS／iDFS／EFS／無乳がん率）が項目により異なる場合があります。治療選択の目安であり、項目間の直接比較には各項の出典をご確認ください。
           </div>
+
+          {menoUnset && (
+            <div style={{
+              fontSize:10.5, color:"#7a5a2a", background:"#fdf5e8",
+              border:"1px solid #eddcc0", borderRadius:6, padding:"6px 10px",
+              marginBottom:14, lineHeight:1.6,
+            }}>
+              ℹ️ 閉経状況が未選択のため、<b>閉経後データに準拠</b>して表示しています（閉経前を選ぶとOFS基盤の内分泌療法に切り替わります）。
+            </div>
+          )}
 
           {/* 凡例 */}
           <div style={{ display:"flex", gap:12, marginBottom:12, flexWrap:"wrap" }}>
@@ -597,66 +706,25 @@ function PfsPanel({ anat, subtype, menopause }) {
             </div>
           </div>
 
-          {/* バーチャート */}
+          {/* バーチャート（主系列） */}
           <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
-            {data.map((item, i) => {
-              const { bar: barGrad, txt: txtCol } = pfsColor(item.pfs);
-              const barW = `${item.pfs}%`;
-              return (
-                <div key={i} style={{
-                  background:"#fff",
-                  border: item.type === "trial"
-                    ? "1.5px solid #bacede"
-                    : "1.5px dashed #ccd8e8",
-                  borderRadius:8, padding:"9px 12px",
-                }}>
-                  {/* ラベル行 */}
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:5 }}>
-                    <div style={{ flex:1, paddingRight:10 }}>
-                      <span style={{ fontSize:12, color:"#222", fontWeight:600, lineHeight:1.5 }}>
-                        {item.label}
-                      </span>
-                      {item.type === "trial" && (
-                        <span style={{ marginLeft:6, fontSize:10, background:"#2a6aaa", color:"#fff",
-                          borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>
-                          RCT
-                        </span>
-                      )}
-                      {item.tp && (
-                        <span style={{ marginLeft:6, fontSize:10, background:"#eef2f8", color:"#40608a",
-                          border:"1px solid #cdd8e8", borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>
-                          {item.tp}
-                        </span>
-                      )}
-                    </div>
-                    <span style={{
-                      fontSize:18, fontWeight:900, color:txtCol, minWidth:52, textAlign:"right", lineHeight:1,
-                    }}>
-                      {item.pfs}<span style={{ fontSize:11, fontWeight:600 }}>%</span>
-                    </span>
-                  </div>
-
-                  {/* バー */}
-                  <div style={{ background:"#eaeff7", borderRadius:6, height:12, overflow:"hidden", marginBottom:4 }}>
-                    <div
-                      className="pfs-bar"
-                      style={{
-                        "--bar-w": barW,
-                        height:"100%", borderRadius:6,
-                        width: barW,
-                        background: barGrad,
-                      }}
-                    />
-                  </div>
-
-                  {/* 出典 */}
-                  <div style={{ fontSize:10, color:"#8899bb", lineHeight:1.5 }}>
-                    出典：{item.source}
-                  </div>
-                </div>
-              );
-            })}
+            {mainRows.map((item, i) => renderBar(item, i, false))}
           </div>
+
+          {/* 別枠タグ（②単剤トラスツズマブ等・主系列と分離した臨床オプション） */}
+          {altRows.length > 0 && (
+            <div style={{ marginTop:14 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#8a6a2a", marginBottom:7,
+                display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ background:"#efe7d8", color:"#7a5a2a", border:"1px solid #ddc9a8",
+                  borderRadius:3, padding:"1px 6px", fontSize:10 }}>別枠</span>
+                参考オプション（主系列とは集団・時点が異なります）
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
+                {altRows.map((item, i) => renderBar(item, i, true))}
+              </div>
+            </div>
+          )}
 
           {/* カラーガイド */}
           <div style={{ marginTop:12, display:"flex", gap:8, flexWrap:"wrap" }}>
@@ -753,8 +821,8 @@ function Divider({ title }) {
   return <div style={{ borderTop:"1px solid #eee", paddingTop:14, fontSize:10, fontWeight:700, letterSpacing:"0.15em", color:"#bbb", textTransform:"uppercase" }}>{title}</div>;
 }
 
-function TreatmentScheduleTable({ primaryTx, subtype, surgery, lymphNode, menopause }) {
-  const rows = buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause);
+function TreatmentScheduleTable({ primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade }) {
+  const rows = buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade);
   if (!rows.length) return null;
   const PHASE_COLOR = {
     "術前化学療法":"#1a5fa8","手術":"#b05a00","術後療法":"#1a7a4a",
@@ -1167,7 +1235,11 @@ function App() {
             {showPfs && (
               <>
                 <Divider title="治療別の予後（時点は各項に明記）" />
-                <PfsPanel anat={anat} subtype={subtype} menopause={menopause} />
+                <PfsPanel
+                  anat={anat} subtype={subtype} menopause={menopause}
+                  primaryTx={primaryTx} surgery={surgery}
+                  n={activeN} nCount={activeNCount} t={activeT} grade={grade}
+                />
               </>
             )}
 
@@ -1176,6 +1248,7 @@ function App() {
               <TreatmentScheduleTable
                 primaryTx={primaryTx} subtype={subtype}
                 surgery={surgery} lymphNode={lymphNode} menopause={menopause}
+                anat={anat} n={activeN} nCount={activeNCount} t={activeT} grade={grade}
               />
             )}
 
