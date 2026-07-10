@@ -337,7 +337,7 @@ function isOncotypeDxEligible(subtype, n, nCount) {
   return false;
 }
 
-function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx) {
+function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx, lymphNode) {
   if (!anat || anat === "invalid") return null;
   if (anat !== "0" && !subtype) return null;   // DCIS(0)はsubtype未確定（=バイオマーカー未測定）でも治療を出す（v2.0.9）
   const isAdv = anat === "IV";
@@ -350,6 +350,9 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
   if (anat === "0") {
     const items = ["手術（温存または全摘）"];
     if (surgery === "温存") items.push("放射線療法（温存後：残存乳房照射）");
+    // v2.1.1: DCISのリンパ節処理を局所療法に反映
+    if (lymphNode === "なし") items.push("リンパ節の手術は行いません（センチネルリンパ節生検の省略）");
+    else if (lymphNode === "センチネル生検" || lymphNode === "両方") items.push("センチネルリンパ節生検");
     return [
       { cat:"局所療法", items },
       // DCISはバイオマーカー非依存: isLuminalゲートを外し無条件で内分泌療法を候補表示（v2.0.9・IwaoK合意済）
@@ -497,7 +500,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
 
   // ── DCIS(0)非浸潤がん分岐: 手術＋（温存なら放射線）＋（Luminalなら内分泌）のみ。術後化学・抗HER2は出さない ──
   if (anat === "0") {
-    rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術（温存または全摘）"}${hasSLNB ? "\n±センチネルリンパ節生検" : ""}`, color:"#fef3e2" });
+    rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術（温存または全摘）"}${hasSLNB ? "\n±センチネルリンパ節生検" : (lymphNode === "なし" ? "\nリンパ節処理なし（センチネルリンパ節生検を省略）" : "")}`, color:"#fef3e2" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射（再発リスク低減）", color:"#fff8e1" });
     // DCISはバイオマーカー非依存: isLuminalゲートを外し無条件で内分泌療法行を出す。ER陽性の断定も外す（v2.0.9・IwaoK合意済）
     rows.push({ phase:"内分泌療法", period:"術後〜5年", content:(preMeno ? "タモキシフェン（DCISの再発リスク低減）※閉経前はタモキシフェン。DCISではOFS+AIは行いません" : postMeno ? "アロマターゼ阻害薬 または タモキシフェン（DCISの再発リスク低減）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）"), color:"#f3e8fb" });
@@ -936,7 +939,7 @@ function App() {
   const anat      = getAnatomical(activeT, activeN, selM);
   const prog      = getPrognostic(anat, er, pr, her2, grade);
   const subtype   = getSubtype(er, pr, her2);
-  const treatment = getTreatment(anat, subtype, ki67, activeN, activeNCount, activeT, grade, menopause, surgery, oncotype, primaryTx);
+  const treatment = getTreatment(anat, subtype, ki67, activeN, activeNCount, activeT, grade, menopause, surgery, oncotype, primaryTx, lymphNode);
 
   const stageLabel = (anat && anat !== "invalid") ? `Stage ${anat}` : null;
   const stageColor = (anat && anat !== "invalid") ? (STAGE_COLOR[anat] || "#333") : "#ccc";
@@ -1202,6 +1205,7 @@ function App() {
                     { label:"センチネルリンパ節生検", val:"センチネル生検", color:"#1a5fa8" },
                     { label:"腋窩リンパ節郭清", val:"腋窩郭清", color:"#883000" },
                     { label:"生検＋郭清（両方）", val:"両方", color:"#6a006a" },
+                    ...(anat === "0" ? [{ label:"施行しない", val:"なし", color:"#5a6a7a" }] : []),
                   ].map(({ label, val, color }) => (
                     <button key={val} onClick={()=>setLymphNode(lymphNode===val?null:val)} style={{
                       padding:"7px 14px", borderRadius:8,
@@ -1213,13 +1217,14 @@ function App() {
                 </div>
                 {lymphNode && (
                   <div style={{ marginTop:7, fontSize:11, lineHeight:1.75, padding:"8px 12px", borderRadius:7,
-                    background: lymphNode==="センチネル生検"?"#f4f8ff": lymphNode==="腋窩郭清"?"#fff5f0":"#f8f0ff",
-                    border: lymphNode==="センチネル生検"?"1px solid #d0e4f8": lymphNode==="腋窩郭清"?"1px solid #f0c8b0":"1px solid #e0c0f0",
-                    color: lymphNode==="センチネル生検"?"#334488": lymphNode==="腋窩郭清"?"#883000":"#552266",
+                    background: lymphNode==="センチネル生検"?"#f4f8ff": lymphNode==="腋窩郭清"?"#fff5f0": lymphNode==="なし"?"#f4f6f8":"#f8f0ff",
+                    border: lymphNode==="センチネル生検"?"1px solid #d0e4f8": lymphNode==="腋窩郭清"?"1px solid #f0c8b0": lymphNode==="なし"?"1px solid #d8dee4":"1px solid #e0c0f0",
+                    color: lymphNode==="センチネル生検"?"#334488": lymphNode==="腋窩郭清"?"#883000": lymphNode==="なし"?"#44515e":"#552266",
                   }}>
                     {lymphNode === "センチネル生検" && "腋窩に最初に流れる「見張りリンパ節」を手術中に取り出して調べます。転移がなければ郭清は省略できます（リンパ浮腫リスク約5%）。"}
                     {lymphNode === "腋窩郭清" && "腋窩のリンパ節を広範囲に取り除きます。リンパ浮腫（腕のむくみ）のリスクがあります（15〜25%）。術後リハビリテーションが重要です。"}
                     {lymphNode === "両方" && "センチネルリンパ節生検を行い、術中迅速病理で転移が確認された場合に続けて腋窩リンパ節郭清を行います。"}
+                    {lymphNode === "なし" && "リンパ節の手術（センチネルリンパ節生検）は行いません。非浸潤癌（DCIS）で乳房温存の場合、リンパ節転移の可能性が低いため省略できます（全摘や広範囲のDCISでは実施を検討します）。"}
                   </div>
                 )}
               </div>
