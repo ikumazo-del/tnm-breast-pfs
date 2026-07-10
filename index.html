@@ -943,7 +943,7 @@ function App() {
   const allTNM     = activeT && activeN && selM;
   const showProgNote  = allTNM && anat !== "invalid" && anat !== "0" && anat !== "IV" && prog && prog !== anat;
   const showNCount    = activeN === "N1";
-  const biomarkersComplete = er !== null && her2 !== null && grade !== null;
+  const biomarkersComplete = anat === "0" ? true : (er !== null && her2 !== null && grade !== null);   // DCIS(0)はバイオマーカー入力の有無に関わらず治療方針以下を表示（v2.1.0）
   const showNeoAdj    = subtype === "TNBC" || subtype === "HER2+" || subtype === "HR+/HER2+";
   const showNeoAdjHR  = subtype === "HR+/HER2-" && ["T2","T3","T4"].includes(activeT);
   const isM1 = selM === "M1";
@@ -1119,28 +1119,21 @@ function App() {
             {allTNM && anat !== "invalid" && (
               <>
                 <Divider title="バイオマーカー" />
-                {anat === "0" && (
-                  <div style={{ fontSize:12, color:"#8a6d3b", background:"#fcf8e3", border:"1px solid #faebcc", borderRadius:6, padding:"6px 10px", marginBottom:6 }}>
-                    DCIS（非浸潤癌）では、バイオマーカーは治療方針に影響しません。内分泌療法は閉経状況で決まります（参考入力は可能ですが結果は変わりません）。
-                  </div>
-                )}
-                <div style={ anat === "0" ? { opacity:0.45, pointerEvents:"none" } : undefined }>
-                  <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
-                    <PlusMinus label="ER" value={er} onChange={setEr} />
-                    <PlusMinus label="PgR" value={pr} onChange={setPr} />
-                    <PlusMinus label="HER2" value={her2} onChange={setHer2} />
-                  </div>
-                  <div>
-                    <RowLabel>Grade（核グレード）</RowLabel>
-                    <SegBtn options={["1","2","3","未施行"]} value={grade} onChange={setGrade} small />
-                  </div>
-                  <Ki67Slider value={ki67} onChange={setKi67} />
+                <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+                  <PlusMinus label="ER" value={er} onChange={setEr} />
+                  <PlusMinus label="PgR" value={pr} onChange={setPr} />
+                  <PlusMinus label="HER2" value={her2} onChange={setHer2} />
                 </div>
+                <div>
+                  <RowLabel>Grade（核グレード）</RowLabel>
+                  <SegBtn options={["1","2","3","未施行"]} value={grade} onChange={setGrade} small />
+                </div>
+                <Ki67Slider value={ki67} onChange={setKi67} />
               </>
             )}
 
             {/* Oncotype DX */}
-            {biomarkersComplete && anat !== "0" && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
+            {biomarkersComplete && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
               <div>
                 <RowLabel>Oncotype DX（術前は医療保険未承認）</RowLabel>
                 <SegBtn options={["低リスク","中リスク","高リスク","未施行"]} value={oncotype} onChange={setOncotype} small />
