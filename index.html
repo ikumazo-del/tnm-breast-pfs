@@ -67,7 +67,7 @@ const STAGE_COLOR = {
 // 主要ソース:
 //   HR+/HER2-: ATAC, BIG1-98, monarchE(5y iDFS 83.6%/76.0%), POTENT(5y iDFS 87%/82%; 孫引き)
 //   HER2+: APT(5y iDFS 96.3%), APHINITY(6y iDFS 91%/88%; N+ 88%/83% HP/placebo), KATHERINE(7y iDFS 80.8%/67.1%)
-//   TNBC: KEYNOTE-522(5y EFS 81.3%/72.3%; pCR 92.2%/88.2%; non-pCR 62.6%/52.3%), CREATE-X(5y DFS 69.8%), OlympiA(3y iDFS 85.9%/77.1%)
+//   TNBC: KEYNOTE-522(5y EFS 81.3%/72.3%; pCR 92.2%/88.2%; non-pCR 62.6%/52.3%), CREATE-X(5y DFS 69.8%), OlympiA(IA2 Ann Oncol 2022 4y iDFS 82.7%/75.4%; ★指標=iDFS)
 const PFS_DATA = {
   "HR+/HER2-": {
     "0": [
@@ -204,13 +204,13 @@ const PFS_DATA = {
       { label:"pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 92.2%" },
       { label:"non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%" },
       { label:"non-pCR→無追加", pfs:56, type:"trial", source:"CREATE-X 観察群 56.1%" },
-      { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）", pfs:86, type:"trial", source:"Tutt, OlympiA, NEJM 2021 3y iDFS 85.9%（BRCA+高リスク; TNBC+HR+混在）" },
-      { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）", pfs:77, type:"trial", source:"Tutt, OlympiA, NEJM 2021 プラセボ群 3y iDFS 77.1%" },
+      { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）※指標iDFS", pfs:82.7, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）4y iDFS 82.7%（オラパリブ, ITT）｜HR 0.63(95%CI 0.50-0.78)｜★指標=iDFS（PFSではない／補助療法の代替指標）｜★ITT全体値（TNBC+HR+混在, 病期別値は非報告）｜一次PDF検証済" },
+      { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）※指標iDFS", pfs:75.4, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2）4y iDFS 75.4%（プラセボ, ITT）｜★指標=iDFS｜★ITT全体値｜一次PDF検証済" },
     ],
     "IIIA": [
       { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:79, type:"est", source:"KEYNOTE-522 81.3%基準（Stage IIを中心、IIIAで若干低下推定）" },
       { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:70, type:"est", source:"KEYNOTE-522 72.3%基準 Stage IIIAへ調整" },
-      { label:"BRCA1/2変異→オラパリブ（OlympiA）", pfs:86, type:"trial", source:"Tutt, OlympiA, NEJM 2021 3y iDFS 85.9%（高リスク全体）" },
+      { label:"BRCA1/2変異→オラパリブ（OlympiA・高リスク全体）※指標iDFS", pfs:82.7, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）4y iDFS 82.7%（ITT全体）｜HR 0.63(95%CI 0.50-0.78)｜★指標=iDFS｜★IIIA特異値ではなくITT全体値の転記（本試験は病期別iDFSを非報告）｜一次PDF検証済" },
     ],
     "IIIB": [
       { label:"術前化学療法＋ペムブロリズマブ", pfs:69, type:"est", source:"KEYNOTE-522 Stage IIIB調整推定" },
