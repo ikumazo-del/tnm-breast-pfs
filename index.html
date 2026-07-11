@@ -396,21 +396,42 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
 
   if (isAdv) {
     if (subtype === "HR+/HER2-") return [
+      // 【v2.1.4・問題2】1次治療の時点で提出しないと次の治療が選べない検査を先頭に明示（IwaoK方針：コンパニオン診断込みで流れが決まる治療は入れる）
+      { cat:"1次治療の前に確認する検査（コンパニオン診断）", items:[
+        "BRCA1/2 遺伝子検査（血液）：陽性の場合、PARP阻害薬（オラパリブ＝リムパーザ／タラゾパリブ＝ターゼナ）が選択肢になります\n※日本での承認は「がん化学療法歴のある」方が対象です",
+        "PIK3CA / AKT1 / PTEN 遺伝子検査（がん組織 または 血液）：陽性の場合、カピバセルチブ（トルカプ）＋フルベストラントが選択肢になります",
+        "HER2の再確認（IHCスコア）：HER2低発現（IHC 1+、または 2+でISH陰性）かどうかで、のちの治療の選択肢が変わります",
+        "転移した部分の生検（可能な場合）：もとの乳がんとホルモン受容体・HER2の結果が変わっていることがあります",
+        "※ これらは1次治療をはじめる時点で提出しておくと、次の治療をスムーズに選べます"
+      ]},
       { cat:"1次治療：内分泌療法 ＋ CDK4/6阻害薬", items: postMeno
-        ? ["アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）＋ アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）","【根拠】MONALEESA-2、MONARCH-3等 第Ⅲ相試験でPFS・OS延長"]
-        : ["タモキシフェン または アロマターゼ阻害薬 ＋ 卵巣機能抑制（LH-RHアゴニスト）＋ アベマシクリブまたはパルボシクリブ","【根拠】MONALEESA-7、MONARCH-2等"]
+        ? ["アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）＋ アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）","【根拠】MONALEESA-2、MONARCH-3等 第Ⅲ相試験でPFS・OS延長\n※MONALEESA試験はリボシクリブ（キスカリ）の試験です。リボシクリブは日本では乳がんに未承認です"]
+        : ["タモキシフェン または アロマターゼ阻害薬 ＋ 卵巣機能抑制（LH-RHアゴニスト）＋ アベマシクリブまたはパルボシクリブ","【根拠】MONALEESA-7、MONARCH-2等\n※MONALEESA試験はリボシクリブ（キスカリ）の試験です。リボシクリブは日本では乳がんに未承認です"]
       },
       { cat:"2次治療：内分泌療法変更 ± CDK4/6 / AKT阻害薬", items:["フルベストラント（ファスロデックス）± CDK4/6阻害薬継続または変更","PIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）＋ フルベストラント（2024年5月承認）","【根拠】MONARCH-2、CAPItello-291試験"]},
       { cat:"化学療法（内分泌療法耐性後）", items:["単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）、カペシタビン、ゲムシタビン 等","ダトポタマブ デルクステカン（ダトロウェイ）：抗TROP-2 ADC（2024年12月承認）\n【根拠】TROPION-Breast01試験 ※担当医にご確認ください"]},
     ];
     if (subtype === "HER2+" || subtype === "HR+/HER2+") return [
+      // 【v2.1.4・問題2】HER2陽性で必要な検査は限られる。PARP阻害薬が「出ない理由」も明示（非適応薬を前に出さない原則の裏返し）
+      { cat:"1次治療の前に確認する検査（コンパニオン診断）", items:[
+        "HER2の再確認（転移した部分の生検が可能な場合）：もとの乳がんとHER2の結果が変わっていることがあります",
+        "ホルモン受容体（ER / PgR）：陽性の場合、抗HER2療法と内分泌療法を組み合わせます",
+        "脳への転移の評価（症状がある場合はMRI）：お薬の選び方が変わることがあります",
+        "※ BRCA1/2遺伝子検査によるPARP阻害薬は「HER2陰性」の方が対象のため、HER2陽性では対象外です"
+      ]},
       { cat:"1次治療：抗HER2療法 ＋ 化学療法", items:["トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）＋ タキサン系","【根拠】CLEOPATRA試験 OS中央値57.1か月"]},
       { cat:"2次治療：T-DXd（エンハーツ）", items:["トラスツズマブ デルクステカン（エンハーツ）：HER2標的ADC","病勢進行リスク72%減少（vs T-DM1）","【根拠】DESTINY-Breast03試験"]},
       { cat:"3次治療：ツカイザ 他", items:["ツカチニブ（ツカイザ）＋ トラスツズマブ ＋ カペシタビン\n2026年2月 日本承認。脳転移例にも有効\n【根拠】HER2CLIMB試験（NEJM 2020）","T-DM1（カドサイラ）、ラパチニブ（タイケルブ）＋ カペシタビン 等"]},
       ...(subtype==="HR+/HER2+" ? [{ cat:"内分泌療法（HR陽性例に追加）", items:["内分泌療法を薬物療法に組み合わせます"] }] : []),
     ];
     return [
-      { cat:"1次治療：化学療法 ± 免疫療法（± PARP阻害薬）", items:["ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル または ゲムシタビン＋カルボプラチン：PD-L1陽性（CPS≥10）例に推奨\n【根拠】KEYNOTE-355試験","── gBRCA1/2変異陽性の場合（要事前BRCA検査）──","オラパリブ（リムパーザ）、タラゾパリブ（ターゼナ）：転移後1次治療からPARP阻害薬が選択肢"]},
+      // 【v2.1.4・問題2】PD-L1は1次治療の選択に直結する（KEYNOTE-355）。BRCAは次の治療に直結。両方とも1次治療前に提出が必要。
+      { cat:"1次治療の前に確認する検査（コンパニオン診断）", items:[
+        "PD-L1 検査（CPS）：CPS 10以上の場合、ペムブロリズマブ（キイトルーダ）＋化学療法が1次治療の選択肢になります\n※これは1次治療の選び方そのものに関わるため、治療開始前に必要です",
+        "BRCA1/2 遺伝子検査（血液）：陽性の場合、PARP阻害薬（オラパリブ＝リムパーザ／タラゾパリブ＝ターゼナ）が選択肢になります\n※日本での承認は「がん化学療法歴のある」方が対象です",
+        "転移した部分の生検（可能な場合）：もとの乳がんとホルモン受容体・HER2の結果が変わっていることがあります"
+      ]},
+      { cat:"1次治療：化学療法 ± 免疫療法（± PARP阻害薬）", items:["ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル または ゲムシタビン＋カルボプラチン：PD-L1陽性（CPS≥10）例に推奨\n【根拠】KEYNOTE-355試験","── gBRCA1/2変異陽性の場合（要事前BRCA検査）──","オラパリブ（リムパーザ）、タラゾパリブ（ターゼナ）：単剤で用います（化学療法との併用ではありません）\n※日本での承認は「がん化学療法歴のある」方が対象です\n【根拠】OlympiAD試験（Robson NEJM 2017）：無増悪期間 中央値7.0か月 vs 4.2か月（標準化学療法）"]},
       { cat:"2次治療以降：抗体薬物複合体 他", items:["サシツズマブ ゴビテカン（トロデルビ）：抗TROP-2 ADC\nOS中央値12.1か月 vs 6.7か月\n【根拠】ASCENT試験、2024年9月日本承認","エリブリン（ハラヴェン）、カペシタビン、ゲムシタビン 等"]},
     ];
   }
@@ -517,6 +538,13 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   const isBreastCon = surgery === "温存";
   const postMeno   = menopause === "閉経後";
   const preMeno    = menopause === "閉経前";
+  // 【v2.1.4】Stage IV(M1)判定を anat 基準に統一。従来は surgery==="非手術（薬物療法）" だけで緩和枝に入れており、
+  //  ・M1で術式(温存/全摘)を選ぶと「手術先行＝術後補助療法」枝に落ちる
+  //  ・M1で術前化学療法を選ぶと「術前化学療法（手術前提）」枝に落ちる
+  //  という層間矛盾（getTreatmentは anat==="IV" で緩和的1次治療を返す）が起きていた。
+  //  isPalliative を新設し、if連鎖の最上流（DCISの次）で判定する。M0の非手術（高齢・寝たきり・皮膚浸潤等）も同枝でOK（IwaoK判断）。
+  const isAdv        = anat === "IV";
+  const isPalliative = isAdv || surgery === "非手術（薬物療法）";
   // 内分泌療法の中身（閉経状態で分岐しOFSを整合。閉経前にAI単独を出さない＝層①getTreatmentと一致）
   const etAdjContent =
     postMeno ? "アロマターゼ阻害薬（レトロゾール等）5〜10年"
@@ -549,6 +577,29 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     return rows;
   }
 
+  // ── 【v2.1.4】緩和的1次治療枝（Stage IV、および M0の非手術例）: 術前化学療法枝より先に判定する ──
+  if (isPalliative) {
+    // M1で局所制御・症状緩和目的の手術を選んだ場合のみ手術行を出す（術後補助療法は出さない）
+    if (isAdv && surgery && surgery !== "非手術（薬物療法）") {
+      rows.push({ phase:"手術（局所治療）", period:"適応時", content:`${surgery}\n遠隔転移がある場合の手術は、局所の症状をやわらげる・局所を抑える目的で行います（再発予防の「術後の追加治療」としては行いません）`, color:"#fef3e2" });
+    }
+    if (subtype === "HR+/HER2-") {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"内分泌療法 ＋ CDK4/6阻害薬（推奨）\n・AI（レトロゾール等）または タモキシフェン＋卵巣機能抑制\n・＋アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"フルベストラント（ファスロデックス）± CDK4/6阻害薬\nPIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）+ フルベストラント", color:"#ddeeff" });
+      rows.push({ phase:"化学療法（耐性後）", period:"2次治療後 進行時", content:"単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）等\nダトポタマブ デルクステカン（ダトロウェイ）（2024年12月承認）", color:"#f0e8fb" });
+    } else if (subtype === "HER2+" || subtype === "HR+/HER2+") {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）＋ タキサン系\n【根拠】CLEOPATRA試験 OS中央値57.1か月", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"トラスツズマブ デルクステカン（エンハーツ）：T-DXd\n病勢進行リスク72%減少\n【根拠】DESTINY-Breast03試験", color:"#ddeeff" });
+      rows.push({ phase:"3次治療（参考）", period:"2次治療後 進行時", content:"ツカチニブ（ツカイザ）＋ トラスツズマブ ＋ カペシタビン\n2026年2月 日本承認。脳転移例にも有効\n【根拠】HER2CLIMB試験", color:"#f0e8fb" });
+    } else {
+      rows.push({ phase:"1次治療", period:"診断後〜", content:"化学療法 ± 免疫療法\n・ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル等（PD-L1陽性 CPS≥10）\n・PD-L1陰性例：アントラサイクリン系・タキサン系\n【根拠】KEYNOTE-355試験", color:"#e8f0fb" });
+      rows.push({ phase:"2次治療以降", period:"1次治療後 進行時", content:"サシツズマブ ゴビテカン（トロデルビ）：抗TROP-2 ADC（2024年9月 日本承認）\nその他：エリブリン（ハラヴェン）、カペシタビン等\ngBRCA1/2変異陽性例：PARP阻害薬（オラパリブ／タラゾパリブ）単剤も選択肢（化学療法との併用ではありません）", color:"#ddeeff" });
+    }
+    rows.push({ phase:"定期評価", period:"2〜3か月毎", content:"画像検査・血液検査で病状の変化を確認\n効果・副作用に応じてレジメン変更を検討", color:"#f5f5f5" });
+    rows.push({ phase:"症状緩和ケア", period:"治療中〜継続", content:"疼痛（オピオイド等）・倦怠感・浮腫・皮膚の症状などのコントロール\n緩和ケアチームと連携", color:"#f0f8f0" });
+    return rows;
+  }
+
   if (isNeoAdjHR) {
     rows.push({ phase:"術前化学療法", period:"第1〜12週（EC療法）", content:"EC療法（エピルビシン＋シクロホスファミド）\n3週毎4サイクル", color:"#e8f0fb" });
     rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
@@ -576,21 +627,6 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     }
     if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd + s1Add + olaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
-  } else if (surgery === "非手術（薬物療法）") {
-    if (subtype === "HR+/HER2-") {
-      rows.push({ phase:"1次治療", period:"診断後〜", content:"内分泌療法 ＋ CDK4/6阻害薬（推奨）\n・AI（レトロゾール等）または タモキシフェン＋卵巣機能抑制\n・＋アベマシクリブ（ベージニオ）またはパルボシクリブ（イブランス）", color:"#e8f0fb" });
-      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"フルベストラント（ファスロデックス）± CDK4/6阻害薬\nPIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）+ フルベストラント", color:"#ddeeff" });
-      rows.push({ phase:"化学療法（耐性後）", period:"2次治療後 進行時", content:"単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）等\nダトポタマブ デルクステカン（ダトロウェイ）（2024年12月承認）", color:"#f0e8fb" });
-    } else if (subtype === "HER2+" || subtype === "HR+/HER2+") {
-      rows.push({ phase:"1次治療", period:"診断後〜", content:"トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）＋ タキサン系\n【根拠】CLEOPATRA試験 OS中央値57.1か月", color:"#e8f0fb" });
-      rows.push({ phase:"2次治療", period:"1次治療後 進行時", content:"トラスツズマブ デルクステカン（エンハーツ）：T-DXd\n病勢進行リスク72%減少\n【根拠】DESTINY-Breast03試験", color:"#ddeeff" });
-      rows.push({ phase:"3次治療（参考）", period:"2次治療後 進行時", content:"ツカチニブ（ツカイザ）＋ トラスツズマブ ＋ カペシタビン\n2026年2月 日本承認。脳転移例にも有効\n【根拠】HER2CLIMB試験", color:"#f0e8fb" });
-    } else {
-      rows.push({ phase:"1次治療", period:"診断後〜", content:"化学療法 ± 免疫療法\n・ペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル等（PD-L1陽性 CPS≥10）\n・PD-L1陰性例：アントラサイクリン系・タキサン系\n【根拠】KEYNOTE-355試験", color:"#e8f0fb" });
-      rows.push({ phase:"2次治療以降", period:"1次治療後 進行時", content:"サシツズマブ ゴビテカン（トロデルビ）：抗TROP-2 ADC（2024年9月 日本承認）\nその他：エリブリン（ハラヴェン）、カペシタビン等\ngBRCA1/2変異陽性例：PARP阻害薬を追加検討", color:"#ddeeff" });
-    }
-    rows.push({ phase:"定期評価", period:"2〜3か月毎", content:"画像検査・血液検査で病状の変化を確認\n効果・副作用に応じてレジメン変更を検討", color:"#f5f5f5" });
-    rows.push({ phase:"症状緩和ケア", period:"治療中〜継続", content:"疼痛・倦怠感・浮腫などの症状コントロール\n緩和ケアチームと連携", color:"#f0f8f0" });
   } else {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
     if (subtype !== "HR+/HER2-") {
@@ -603,7 +639,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   }
 
-  if (surgery !== "非手術（薬物療法）") {
+  if (!isPalliative) {
     rows.push({ phase:"定期フォロー", period:"治療中〜以降", content:"定期診察・血液検査・画像検査\n副作用・再発の早期発見", color:"#f5f5f5" });
   }
   return rows;
@@ -1233,10 +1269,19 @@ function App() {
             {biomarkersComplete && (
               <div>
                 <RowLabel>乳房手術術式</RowLabel>
-                {isM1 ? (
-                  <button style={{ padding:"7px 18px", borderRadius:8, border:"2px solid #8b0000", background:"#8b0000", color:"#fff", fontSize:13, fontWeight:700, cursor:"default" }}>非手術（薬物療法）</button>
-                ) : (
-                  <SegBtn options={["温存","全摘","未決定"]} value={surgery} onChange={setSurgery} />
+                {/* 【v2.1.4】M1: 従来は「非手術」固定表示だったが、遠隔転移例でも局所制御・症状緩和目的の手術はありうる（IwaoK）。
+                    選択可能にしつつ、スケジュールは buildSchedule の isPalliative で常に緩和的1次治療枝に固定される。
+                    M0: 高齢・寝たきり・皮膚浸潤等で非切除とする例があるため「非手術（薬物療法）」を追加（IwaoK）。 */}
+                <SegBtn options={isM1 ? ["非手術（薬物療法）","温存","全摘"] : ["温存","全摘","非手術（薬物療法）","未決定"]} value={surgery} onChange={setSurgery} />
+                {isM1 && surgery && surgery !== "非手術（薬物療法）" && (
+                  <div style={{ marginTop:6, padding:"7px 10px", background:"#fff4e5", border:"1px solid #f0c891", borderRadius:6, fontSize:12, color:"#7a4a00", lineHeight:1.6 }}>
+                    遠隔転移がある場合の手術は、局所の症状をやわらげる・局所を抑える目的で行います。再発予防のための「術後の追加治療」は行わず、全身の薬物療法（緩和的1次治療）が治療の中心になります。
+                  </div>
+                )}
+                {!isM1 && surgery === "非手術（薬物療法）" && (
+                  <div style={{ marginTop:6, padding:"7px 10px", background:"#f0f8f0", border:"1px solid #b8d8b8", borderRadius:6, fontSize:12, color:"#2a5a2a", lineHeight:1.6 }}>
+                    手術を行わない場合は、薬物療法と症状緩和ケア（痛み・皮膚の症状など）が治療の中心になります。
+                  </div>
                 )}
               </div>
             )}
