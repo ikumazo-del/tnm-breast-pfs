@@ -204,13 +204,10 @@ const PFS_DATA = {
       { label:"pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 92.2%" },
       { label:"non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%" },
       { label:"non-pCR→無追加", pfs:56, type:"trial", source:"CREATE-X 観察群 56.1%" },
-      { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）※指標iDFS", pfs:82.7, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）4y iDFS 82.7%（オラパリブ, ITT）｜HR 0.63(95%CI 0.50-0.78)｜★指標=iDFS（PFSではない／補助療法の代替指標）｜★ITT全体値（TNBC+HR+混在, 病期別値は非報告）｜一次PDF検証済" },
-      { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）※指標iDFS", pfs:75.4, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2）4y iDFS 75.4%（プラセボ, ITT）｜★指標=iDFS｜★ITT全体値｜一次PDF検証済" },
     ],
     "IIIA": [
       { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:79, type:"est", source:"KEYNOTE-522 81.3%基準（Stage IIを中心、IIIAで若干低下推定）" },
       { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:70, type:"est", source:"KEYNOTE-522 72.3%基準 Stage IIIAへ調整" },
-      { label:"BRCA1/2変異→オラパリブ（OlympiA・高リスク全体）※指標iDFS", pfs:82.7, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）4y iDFS 82.7%（ITT全体）｜HR 0.63(95%CI 0.50-0.78)｜★指標=iDFS｜★IIIA特異値ではなくITT全体値の転記（本試験は病期別iDFSを非報告）｜一次PDF検証済" },
     ],
     "IIIB": [
       { label:"術前化学療法＋ペムブロリズマブ", pfs:69, type:"est", source:"KEYNOTE-522 Stage IIIB調整推定" },
@@ -268,6 +265,19 @@ const PFS_DATA_PREMENO = {
       { label:"術前化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:75, type:"est", tp:"5年", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIC按分75｜閉経前ETはOFS基盤｜type:est" },
     ],
   },
+};
+
+// ── オラパリブ(OlympiA)iDFS行: olaparibEligibility成立時にPfsPanelへ動的注入 ──
+// 値はGeyer AnnOncol2022 Fig2B サブグループ別4年iDFS（判断A: ITTでなくサブグループ値）。指標=iDFS（PFSではない）。
+const OLAPARIB_PFS = {
+  "TNBC": [
+    { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）※指標iDFS", pfs:83.1, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）Fig2B TNBCサブグループ 4y iDFS 83.1%（オラパリブ）｜HR 0.62(95%CI 0.49-0.79)｜★指標=iDFS（PFSではない／補助療法の代替指標）｜一次PDF検証済" },
+    { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）※指標iDFS", pfs:75.2, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2）Fig2B TNBCサブグループ 4y iDFS 75.2%（プラセボ）｜★指標=iDFS｜一次PDF検証済" },
+  ],
+  "HR+/HER2-": [
+    { label:"BRCA1/2変異＋高リスク→オラパリブ（OlympiA）※指標iDFS", pfs:80.1, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2・MFU 3.5y）Fig2B HR+/HER2-サブグループ 4y iDFS 80.1%（オラパリブ）｜HR 0.68(95%CI 0.40-1.13)｜★指標=iDFS｜★HR+適応=腋窩リンパ節4個以上｜一次PDF検証済" },
+    { label:"BRCA1/2変異＋高リスク→プラセボ（OlympiA対照）※指標iDFS", pfs:76.6, type:"trial", tp:"4年", source:"Geyer, OlympiA, Ann Oncol 2022（IA2）Fig2B HR+/HER2-サブグループ 4y iDFS 76.6%（プラセボ）｜★指標=iDFS｜一次PDF検証済" },
+  ],
 };
 
 // ── ステージ関数 ──
@@ -335,6 +345,26 @@ function isOncotypeDxEligible(subtype, n, nCount) {
   if (n === "N0" || n === "N1mi") return true;
   if (n === "N1" && nCount === "1-3") return true;
   return false;
+}
+// ── オラパリブ(OlympiA)術後補助適応判定 ──────────────────────────────
+// 出典: JOHBOC 遺伝性乳癌卵巣癌GL 2024 乳癌CQ8 / Tutt NEJM2021 / Geyer AnnOncol2022。
+// 大前提: gBRCA1/2病的バリアント陽性（アプリにBRCA入力軸なし→表示は常に「gBRCA+例」条件付き）。HER2陰性のみ。
+// 化学療法の時期(術前=non-pCR前提／術後=手術先行)×サブタイプで再発高リスク定義が異なる。
+// 返り値: null(非該当) | { ctx:"術前"|"術後", cond:"表示用の再発高リスク条件文" }
+function olaparibEligibility(subtype, primaryTx, t, n, nCount) {
+  if (subtype !== "TNBC" && subtype !== "HR+/HER2-") return null;   // OlympiAはHER2陰性のみ
+  const isNeoAdj = primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法";
+  if (isNeoAdj) {
+    // 術前化学療法後 = non-pCR前提（pCR達成例は非適応）
+    return subtype === "TNBC"
+      ? { ctx:"術前", cond:"non-pCR（乳房/腋窩に浸潤癌残存）" }
+      : { ctx:"術前", cond:"non-pCR かつ CPS+EGスコア≥3" };   // HR+/HER2-
+  }
+  // 術後化学療法（手術先行）
+  if (subtype === "TNBC")
+    return (["T2","T3","T4"].includes(t) || isNPlus(n)) ? { ctx:"術後", cond:"pT2以上 または pN1以上" } : null;
+  // HR+/HER2-: 腋窩リンパ節転移4個以上
+  return isN4plus(n, nCount) ? { ctx:"術後", cond:"腋窩リンパ節転移4個以上" } : null;
 }
 
 function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx, lymphNode) {
@@ -419,7 +449,9 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
     //   etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
     // }
     if (nPos) etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
-    if (nPos && isHighRisk) etItems.push("オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・N1以上高リスク例（OlympiA試験）※ BRCA検査が必要");
+    // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。HR+術後=腋窩4個以上／術前=non-pCR&CPS+EG≥3。アベマシクリブとは併用不可（択一）。
+    const olaEligHR = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+    if (olaEligHR) etItems.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligHR.cond}の例（OlympiA試験）※ BRCA検査が必要${abema ? "／アベマシクリブとは併用不可・どちらか一方を選択" : ""}`);
     res.push({ cat:"内分泌療法 ＋ 補助薬物療法", items:etItems });
 
     const isNeoAdjSelected = primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法";
@@ -464,7 +496,9 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
 
   if (subtype === "TNBC") {
     const items = ["術前：ペムブロリズマブ（キイトルーダ）＋ アンスラサイクリン＋タキサン（KEYNOTE-522）","術後：ペムブロリズマブ継続（1年）","術前でpCR未達の場合 → カペシタビン追加を考慮"];
-    if (nPos) items.push("オラパリブ（リムパーザ）1年：gBRCA1/2 変異陽性・N1以上の高リスク例（OlympiA 試験）※ BRCA 検査が必要");
+    // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。TNBC術後=pT2以上orpN1以上／術前=non-pCR。カペシタビンとは併用不可（択一）。
+    const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+    if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
     res.push({ cat:"化学療法 ＋ 免疫療法", items });
   }
 
@@ -496,6 +530,13 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   const s1Add = (subtype === "HR+/HER2-" && isNPlus(n))
     ? "\n中〜高リスク（N1以上）：TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 追加を考慮（POTENT試験）"
     : "";
+  // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)をスケジュールにも配線。olaparibEligibilityで適応判定し各ホーム行に注記。
+  //  HR+はアベマシクリブと、TNBC(非pCR)はカペシタビンと、それぞれ併用不可（択一）。gBRCA+前提・要BRCA検査。
+  const olaElig = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+  const olaAltPartner = subtype === "HR+/HER2-" ? "アベマシクリブ" : "カペシタビン";
+  const olaAdd = olaElig
+    ? `\ngBRCA1/2変異陽性・${olaElig.cond}：オラパリブ（リムパーザ）1年も選択肢（OlympiA試験・${olaAltPartner}とは併用不可／要BRCA検査）`
+    : "";
   const rows = [];
 
   // ── DCIS(0)非浸潤がん分岐: 手術＋（温存なら放射線）＋（Luminalなら内分泌）のみ。術後化学・抗HER2は出さない ──
@@ -513,7 +554,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     rows.push({ phase:"術前化学療法", period:"第13〜24週（タキサン）", content:"パクリタキセル（3週毎4サイクル）", color:"#e8f0fb" });
     rows.push({ phase:"術前内分泌療法（追加時）", period:"化学療法終了後 2〜4か月", content:(postMeno ? "アロマターゼ阻害薬（レトロゾール等）" : "LH-RHアゴニスト＋タモキシフェン等") + "\n※化学療法単独で手術の場合もあり", color:"#f3e8fb" });
     rows.push({ phase:"手術", period:"術前治療終了後 約4〜6週", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
-    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:(postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）") + abemaAdd + s1Add, color:"#f3e8fb" });
+    rows.push({ phase:"術後内分泌療法", period:"術後〜5〜10年", content:(postMeno ? "アロマターゼ阻害薬継続（合計5〜10年）" : preMeno ? "タモキシフェン（±卵巣機能抑制OFS）継続（合計5〜10年）\n高リスク例：OFS＋タモキシフェン または AI（SOFT/TEXT）" : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）") + abemaAdd + s1Add + olaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射\n断端陽性・リスク高：追加照射", color:"#fff8e1" });
   } else if (isNeoAdj) {
     if (isHER2) {
@@ -531,9 +572,9 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"T-DM1（カドサイラ）14サイクル（KATHERINE試験）", color:"#fdeaea" });
     } else if (isTNBC) {
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
-      rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続", color:"#fdeaea" });
+      rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続" + olaAdd, color:"#fdeaea" });
     }
-    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd + s1Add, color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd + s1Add + olaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   } else if (surgery === "非手術（薬物療法）") {
     if (subtype === "HR+/HER2-") {
@@ -553,12 +594,12 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   } else {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
     if (subtype !== "HR+/HER2-") {
-      rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : isTNBC ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
+      rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : isTNBC ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" + olaAdd : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
     } else {
       rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
     }
     if (isHER2) rows.push({ phase:"術後抗HER2療法", period:"合計1年", content:"トラスツズマブ（＋ペルツズマブ）", color:"#e8f7ee" });
-    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + abemaAdd + s1Add, color:"#f3e8fb" });
+    if (isHR) rows.push({ phase:"内分泌療法", period:"〜5〜10年", content:etAdjContent + abemaAdd + s1Add + olaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
   }
 
@@ -588,11 +629,15 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, nCount, t, 
 
   // N条件フィルタ: req.nPlus の行（S-1等）はN+のときのみ表示（N0/低リスクで非表示）
   const data = rawData.filter(item => !(item.req?.nPlus && !nPos));
-  if (data.length === 0) return null;
+  // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)iDFS行を適応成立時に動的注入（判断B: 適応を厳密化）。
+  //  TNBC術後=pT2+/pN1+、HR+術後=腋窩4個以上、術前=non-pCR前提。値はサブグループ別4年iDFS(Fig2B)。
+  const olaElig = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+  const dataWithOla = (olaElig && OLAPARIB_PFS[subtype]) ? [...data, ...OLAPARIB_PFS[subtype]] : data;
+  if (dataWithOla.length === 0) return null;
 
   // 別枠タグ行（②単剤トラスツズマブ等）を主系列と分離
-  const mainRows = data.filter(it => it.tag !== "別枠");
-  const altRows  = data.filter(it => it.tag === "別枠");
+  const mainRows = dataWithOla.filter(it => it.tag !== "別枠");
+  const altRows  = dataWithOla.filter(it => it.tag === "別枠");
 
   const maxPfs = 100;
 
