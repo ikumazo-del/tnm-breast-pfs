@@ -38,9 +38,9 @@ const N_ITEMS = ["N0","N1mi","N1","N2","N3"];
 const M_ITEMS = ["M0","M1"];
 const T_DESC = {
   T0:"原発巣の証拠なし", Tis:"非浸潤癌（DCIS）または Paget 病（浸潤なし）",
-  T1:"最大径 ≤ 20 mm（T1mi ≤1 / T1a ≤5 / T1b ≤10 / T1c ≤20 mm）",
-  T2:"最大径 > 20 mm、≤ 50 mm", T3:"最大径 > 50 mm",
-  T4:"胸壁または皮膚への浸潤（腫瘍径に関わらずT4）",
+  T1:"浸潤径 ≤ 20 mm（T1mi ≤1 / T1a ≤5 / T1b ≤10 / T1c ≤20 mm）",
+  T2:"浸潤径 > 20 mm、≤ 50 mm", T3:"浸潤径 > 50 mm",
+  T4:"胸壁または皮膚への浸潤（浸潤径に関わらずT4）",
 };
 const T4_SUB_DESC = {
   T4a:"胸壁への浸潤（肋骨・肋間筋・前鋸筋への固定）",
@@ -48,11 +48,14 @@ const T4_SUB_DESC = {
   T4c:"T4a＋T4bの両方を満たす",
   T4d:"炎症性乳がん（発赤・浮腫が皮膚の1/3以上）",
 };
+// 【v2.1.15】pN（手術病理の個数）を主軸に前面。臨床N（cN）は控えめに併記（副次注記）。
+//   個数で表せない所見（cN2固定・融合／pN2b内胸のみ／pN3b内乳＋腋窩／pN3c鎖骨上）は
+//   数値で殺さず、各行の「｜」以降に温存する（IwaoK決裁 2026-07-17・④の落とし所）。
 const N_DESC = {
-  N0:"リンパ節転移なし", N1mi:"微小転移（> 0.2 mm かつ ≤ 2 mm）",
-  N1:"同側レベルⅠ・Ⅱ腋窩リンパ節転移（可動性あり）",
-  N2:"同側レベルⅠ・Ⅱ腋窩リンパ節 固定・融合、または内胸リンパ節転移",
-  N3:"鎖骨下（レベルⅢ）・鎖骨上、または内乳＋腋窩リンパ節転移",
+  N0:"転移なし（0個）", N1mi:"微小転移 0.2–2 mm（個数には数えない）",
+  N1:"腋窩リンパ節転移 1–3個（pN1）｜臨床：可動性のある腋窩転移（cN1）",
+  N2:"腋窩リンパ節転移 4–9個（pN2a）｜臨床：固定・融合、または内胸節のみ（cN2）",
+  N3:"腋窩転移 10個以上（pN3a）／鎖骨下・鎖骨上・内乳＋腋窩（pN3b/c）",
 };
 const M_DESC = { M0:"遠隔転移なし", M1:"遠隔転移あり" };
 
@@ -534,31 +537,40 @@ function getSubtype(er, pr, her2) {
 }
 
 function isNPlus(n) { return n === "N1" || n === "N2" || n === "N3"; }
-function isN4plus(n, nCount) {
-  if (n === "N2" || n === "N3") return true;
-  if (n === "N1" && nCount === "4+") return true;
+// 【v2.1.15】単一ソース化：nCount（N1の1-3/4+セグメント）を廃止。
+//   陽性個数≥4 は nFromCount で N2(4–9)/N3(≥10) へ自動昇格するため、
+//   「N1かつ4個以上」は構造的に生成不能＝旧 (N1 && "4+") 分岐は死にコード化。
+//   よって isN4plus は「pN個数≥4＝N2/N3」と等価（IwaoK決裁 2026-07-17・③）。
+//   N1ボタン＝1–3個 と定義が確定するので isN1to3 は N1mi/N1 で足りる。
+function isN4plus(n) {
+  return n === "N2" || n === "N3";
+}
+function isN1to3(n) {
+  return n === "N1mi" || n === "N1";
+}
+function isAbemaciclib(n, t, grade, ki67) {
+  if (isN4plus(n)) return true;   // ≥4個（N2/N3）
+  // 1–3個（N1/N1mi）＋高リスク特徴が1つ以上：Grade3 / pT3以上(≥5cm相当) / Ki-67≥20%（monarchE cohort2）
+  const ki67v = Number(ki67);
+  if (isN1to3(n) && (grade === "3" || t === "T3" || t === "T4" || (Number.isFinite(ki67v) && ki67v >= 20))) return true;
   return false;
 }
-function isN1to3(n, nCount) {
-  return n === "N1mi" || (n === "N1" && nCount === "1-3");
-}
-function isAbemaciclib(n, nCount, t, grade) {
-  if (isN4plus(n, nCount)) return true;
-  if (isN1to3(n, nCount) && (grade === "3" || t === "T3" || t === "T4")) return true;
-  return false;
-}
-function isOncotypeDxEligible(subtype, n, nCount) {
+// 【v2.1.16】OncotypeDx適応：HR+/HER2−の保険適用範囲（N0/N1mi/N1）内で、
+//   リスク特徴（N1＝1–3個の節転移 / 核Grade2-3 / Ki-67≥20%）のいずれかがあるとき作動。
+//   ★N2/N3（腋窩4個以上）は日本の保険適用外＝背骨(保険準拠)に従い除外（IwaoK決裁 2026-07-17）。
+//   ★Ki-67閾値は ≥20%（monarchE・ki67High表示と統一・IwaoK決裁 2026-07-17 3便目）。
+function isOncotypeDxEligible(subtype, n, grade, ki67) {
   if (subtype !== "HR+/HER2-") return false;
-  if (n === "N0" || n === "N1mi") return true;
-  if (n === "N1" && nCount === "1-3") return true;
-  return false;
+  if (n === "N2" || n === "N3") return false;   // 腋窩4個以上＝保険適用外
+  const ki67v = Number(ki67);
+  return n === "N1" || grade === "2" || grade === "3" || (Number.isFinite(ki67v) && ki67v >= 20);
 }
 // ── オラパリブ(OlympiA)術後補助適応判定 ──────────────────────────────
 // 出典: JOHBOC 遺伝性乳癌卵巣癌GL 2024 乳癌CQ8 / Tutt NEJM2021 / Geyer AnnOncol2022。
 // 大前提: gBRCA1/2病的バリアント陽性（アプリにBRCA入力軸なし→表示は常に「gBRCA+例」条件付き）。HER2陰性のみ。
 // 化学療法の時期(術前=non-pCR前提／術後=手術先行)×サブタイプで再発高リスク定義が異なる。
 // 返り値: null(非該当) | { ctx:"術前"|"術後", cond:"表示用の再発高リスク条件文" }
-function olaparibEligibility(subtype, primaryTx, t, n, nCount) {
+function olaparibEligibility(subtype, primaryTx, t, n) {
   if (subtype !== "TNBC" && subtype !== "HR+/HER2-") return null;   // OlympiAはHER2陰性のみ
   const isNeoAdj = primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法";
   if (isNeoAdj) {
@@ -571,10 +583,10 @@ function olaparibEligibility(subtype, primaryTx, t, n, nCount) {
   if (subtype === "TNBC")
     return (["T2","T3","T4"].includes(t) || isNPlus(n)) ? { ctx:"術後", cond:"pT2以上 または pN1以上" } : null;
   // HR+/HER2-: 腋窩リンパ節転移4個以上
-  return isN4plus(n, nCount) ? { ctx:"術後", cond:"腋窩リンパ節転移4個以上" } : null;
+  return isN4plus(n) ? { ctx:"術後", cond:"腋窩リンパ節転移4個以上" } : null;
 }
 
-function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surgery, oncotype, primaryTx, lymphNode) {
+function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, oncotype, primaryTx, lymphNode) {
   if (!anat || anat === "invalid") return null;
   if (anat !== "0" && !subtype) return null;   // DCIS(0)はsubtype未確定（=バイオマーカー未測定）でも治療を出す（v2.0.9）
   const isAdv = anat === "IV";
@@ -762,7 +774,7 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
   res.push({ cat:"局所療法", items:localItems });
 
   if (subtype === "HR+/HER2-") {
-    const abema = isAbemaciclib(n, nCount, t, grade);
+    const abema = isAbemaciclib(n, t, grade, ki67);
     // 【v2.0.8】Ki-67(増殖能)をロジックに配線。閾値は施設基準で調整可（St.Gallen系は14-20%、本邦は20-30%も）。
     const KI67_HIGH = 20, KI67_LOW = 10;   // ★施設基準に合わせて変更する箇所
     const ki67v = Number(ki67);
@@ -775,22 +787,25 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
       : ["タモキシフェン または アロマターゼ阻害薬（5〜10年）"];
 
     if (abema) {
-      const why = isN4plus(n, nCount) ? "N4個以上" : grade === "3" ? "N1-3個＋Grade3" : "N1-3個＋腫瘍径≥5cm";
+      const why = isN4plus(n) ? "リンパ節転移4個以上"
+        : grade === "3" ? "N1-3個＋Grade3"
+        : (t === "T3" || t === "T4") ? "N1-3個＋腫瘍径≥5cm"
+        : "N1-3個＋Ki-67≥20%";
       etItems.push(`アベマシクリブ（ベージニオ）＋ 内分泌療法 2年：再発高リスク（${why}、monarchE基準）`);
     }
     // 【v2.0.8方針変更】非適応(N1-3・Grade1/2・T2以下)では薬剤名を出さない＝説明書原案での誤解回避。
     // 以前は下記の教育的注意書きを表示していた（痕跡として残置）：
-    // else if (nPos && isN1to3(n, nCount)) {
+    // else if (nPos && isN1to3(n)) {
     //   etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
     // }
     if (nPos) etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
     // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。HR+術後=腋窩4個以上／術前=non-pCR&CPS+EG≥3。アベマシクリブとは併用不可（択一）。
-    const olaEligHR = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+    const olaEligHR = olaparibEligibility(subtype, primaryTx, t, n);
     if (olaEligHR) etItems.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligHR.cond}の例（OlympiA試験）※ BRCA検査が必要${abema ? "／アベマシクリブとは併用不可・どちらか一方を選択" : ""}`);
     res.push({ cat:"内分泌療法 ＋ 補助薬物療法", items:etItems });
 
     const isNeoAdjSelected = primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法";
-    if (isOncotypeDxEligible(subtype, n, nCount) && !isNeoAdjSelected) {
+    if (isOncotypeDxEligible(subtype, n, grade, ki67) && !isNeoAdjSelected) {
       const odxMsg = oncotype === "高リスク"
         ? "Oncotype DX 高リスク（RS≥26）→ 化学療法を推奨"
         : oncotype === "中リスク"
@@ -832,7 +847,7 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
   if (subtype === "TNBC") {
     const items = ["術前：ペムブロリズマブ（キイトルーダ）＋ アンスラサイクリン＋タキサン（KEYNOTE-522）","術後：ペムブロリズマブ継続（1年）","術前でpCR未達の場合 → カペシタビン追加を考慮"];
     // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。TNBC術後=pT2以上orpN1以上／術前=non-pCR。カペシタビンとは併用不可（択一）。
-    const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+    const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n);
     if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
     res.push({ cat:"化学療法 ＋ 免疫療法", items });
   }
@@ -841,7 +856,7 @@ function getTreatment(anat, subtype, ki67, n, nCount, t, grade, menopause, surge
 }
 
 // ── Treatment Schedule ────────────────────────────────────────────────
-function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade) {
+function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, t, grade, ki67) {
   const isNeoAdj   = primaryTx === "術前化学療法";
   const isNeoAdjHR = primaryTx === "術前化学内分泌療法";
   const isHER2     = subtype === "HER2+" || subtype === "HR+/HER2+";
@@ -865,7 +880,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     : preMeno ? "タモキシフェン 5〜10年（閉経前標準）\n高リスク例：卵巣機能抑制(OFS：LH-RHアゴニスト)＋タモキシフェン または AI（SOFT/TEXT）"
     : "閉経状況により選択：閉経後=AI／閉経前=タモキシフェン±卵巣機能抑制(OFS)";
   // アベマシクリブ(monarchE)はHR+/HER2-限定かつ高リスク(monarchE基準)のみ。HER2陽性・低リスク(IA〜IIBのN0/N1(1-3)非高リスク)には付与しない。
-  const abemaAdd = (subtype === "HR+/HER2-" && isAbemaciclib(n, nCount, t, grade))
+  const abemaAdd = (subtype === "HR+/HER2-" && isAbemaciclib(n, t, grade, ki67))
     ? "\n高リスク：アベマシクリブ2年追加（monarchE基準）"
     : "";
   // 【v2.0.8】S-1をスケジュールにも配線（説明文getTreatmentとの非対称を解消）。HR+/HER2-・N1以上のみ。
@@ -874,7 +889,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     : "";
   // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)をスケジュールにも配線。olaparibEligibilityで適応判定し各ホーム行に注記。
   //  HR+はアベマシクリブと、TNBC(非pCR)はカペシタビンと、それぞれ併用不可（択一）。gBRCA+前提・要BRCA検査。
-  const olaElig = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+  const olaElig = olaparibEligibility(subtype, primaryTx, t, n);
   const olaAltPartner = subtype === "HR+/HER2-" ? "アベマシクリブ" : "カペシタビン";
   const olaAdd = olaElig
     ? `\ngBRCA1/2変異陽性・${olaElig.cond}：オラパリブ（リムパーザ）1年も選択肢（OlympiA試験・${olaAltPartner}とは併用不可／要BRCA検査）`
@@ -974,7 +989,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
 }
 
 // ── 5年PFSパネル ──────────────────────────────────────────────────────
-function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, nCount, t, grade }) {
+function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade }) {
   const [expanded, setExpanded] = useState(true);
   if (!anat || !subtype || anat === "invalid" || anat === "IV" || anat === "0") return null;
   // 閉経状態フラグ（Unit 2で閉経前HR+レジメンの出し分けに使用）
@@ -995,7 +1010,7 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, nCount, t, 
   const data = rawData.filter(item => !(item.req?.nPlus && !nPos));
   // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)iDFS行を適応成立時に動的注入（判断B: 適応を厳密化）。
   //  TNBC術後=pT2+/pN1+、HR+術後=腋窩4個以上、術前=non-pCR前提。値はサブグループ別4年iDFS(Fig2B)。
-  const olaElig = olaparibEligibility(subtype, primaryTx, t, n, nCount);
+  const olaElig = olaparibEligibility(subtype, primaryTx, t, n);
   const dataWithOla = (olaElig && OLAPARIB_PFS[subtype]) ? [...data, ...OLAPARIB_PFS[subtype]] : data;
   if (dataWithOla.length === 0) return null;
 
@@ -1258,8 +1273,8 @@ function Divider({ title }) {
   return <div style={{ borderTop:"1px solid #eee", paddingTop:14, fontSize:10, fontWeight:700, letterSpacing:"0.15em", color:"#bbb", textTransform:"uppercase" }}>{title}</div>;
 }
 
-function TreatmentScheduleTable({ primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade }) {
-  const rows = buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, nCount, t, grade);
+function TreatmentScheduleTable({ primaryTx, subtype, surgery, lymphNode, menopause, anat, n, t, grade, ki67 }) {
+  const rows = buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, n, t, grade, ki67);
   if (!rows.length) return null;
   const PHASE_COLOR = {
     "術前化学療法":"#1a5fa8","手術":"#b05a00","術後療法":"#1a7a4a",
@@ -1312,7 +1327,6 @@ function App() {
   const [selT, setSelT] = useState(null);
   const [selT4sub, setSelT4sub] = useState(null);
   const [selN, setSelN] = useState(null);
-  const [nCount, setNCount] = useState(null);
   const [selM, setSelM] = useState(null);
   const [tumorSize, setTumorSize] = useState(null);
   const [lymphCount, setLymphCount] = useState(null);
@@ -1338,23 +1352,23 @@ function App() {
     return "N3";
   }
 
+  // 【v2.1.15】単一ソース化：T/Nはそれぞれ「数値スライダー」と「フラグボタン」の2入力だが、
+  //   活性値(activeT/activeN)は常にどちらか一方から一意に決まる（数値が入っていれば数値が上書き）。
+  //   nCountは廃止（N1ボタン=1–3個と定義が確定・≥4はN2へ自動昇格）。
   const autoT = tFromSize(tumorSize);
   const autoN = nFromCount(lymphCount);
-  const autoNCount = lymphCount === null ? null : lymphCount === 0 ? null : lymphCount <= 3 ? "1-3" : "4+";
   const activeT = selT === "T4" ? "T4" : (tumorSize !== null ? autoT : selT);
   const activeN = lymphCount !== null ? autoN : selN;
-  const activeNCount = lymphCount !== null ? autoNCount : nCount;
 
   const anat      = getAnatomical(activeT, activeN, selM);
   const prog      = getPrognostic(anat, er, pr, her2, grade);
   const subtype   = getSubtype(er, pr, her2);
-  const treatment = getTreatment(anat, subtype, ki67, activeN, activeNCount, activeT, grade, menopause, surgery, oncotype, primaryTx, lymphNode);
+  const treatment = getTreatment(anat, subtype, ki67, activeN, activeT, grade, menopause, surgery, oncotype, primaryTx, lymphNode);
 
   const stageLabel = (anat && anat !== "invalid") ? `Stage ${anat}` : null;
   const stageColor = (anat && anat !== "invalid") ? (STAGE_COLOR[anat] || "#333") : "#ccc";
   const allTNM     = activeT && activeN && selM;
   const showProgNote  = allTNM && anat !== "invalid" && anat !== "0" && anat !== "IV" && prog && prog !== anat;
-  const showNCount    = activeN === "N1";
   const biomarkersComplete = anat === "0" ? true : (er !== null && her2 !== null && grade !== null);   // DCIS(0)はバイオマーカー入力の有無に関わらず治療方針以下を表示（v2.1.0）
   const showNeoAdj    = subtype === "TNBC" || subtype === "HER2+" || subtype === "HR+/HER2+";
   const showNeoAdjHR  = subtype === "HR+/HER2-" && ["T2","T3","T4"].includes(activeT);
@@ -1367,11 +1381,16 @@ function App() {
   function handleReset() {
     setPatientName(""); setAge(""); setMenopause(null); setSurgery(null);
     setPrimaryTx(null); setLymphNode(null);
-    setSelT(null); setSelT4sub(null); setSelN(null); setNCount(null); setSelM(null);
+    setSelT(null); setSelT4sub(null); setSelN(null); setSelM(null);
     setTumorSize(null); setLymphCount(null);
     setEr(null); setPr(null); setHer2(null); setGrade(null); setKi67(20);
     setOncotype(null);
   }
+
+  // 【v2.1.15】単一ソース強制：数値スライダー/ステッパを触った瞬間、対応するフラグボタン選択を破棄する（同期上書き）。
+  //   これで「ボタンで選んだ状態のまま裏でスライダーが別値を持つ」矛盾が構造的に起きない（Gemini指摘の非同期を解消）。
+  const applyTumorSize = (updater) => { setTumorSize(updater); setSelT(null); setSelT4sub(null); };
+  const applyLymphCount = (updater) => { setLymphCount(updater); setSelN(null); };
 
   const hasInput = activeT||activeN||selM||er||pr||her2||grade||patientName||age||menopause||surgery||primaryTx||lymphNode;
   const today = new Date().toLocaleDateString("ja-JP", { year:"numeric", month:"long", day:"numeric" });
@@ -1436,17 +1455,17 @@ function App() {
             <div>
               <RowLabel>T — 原発腫瘍</RowLabel>
               <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10, background:"#f8faff", borderRadius:8, padding:"8px 10px" }}>
-                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>腫瘍径</span>
-                <button onClick={()=>setTumorSize(v => v===null?20:Math.max(1,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
+                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>浸潤径</span>
+                <button onClick={()=>applyTumorSize(v => v===null?20:Math.max(1,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
                 <div style={{ position:"relative", flex:1 }}>
                   <input type="range" min={1} max={80} value={tumorSize ?? 20} disabled={tumorSize===null}
-                    onChange={e=>setTumorSize(Number(e.target.value))}
+                    onChange={e=>applyTumorSize(Number(e.target.value))}
                     style={{ width:"100%", accentColor:"#1a5fa8", cursor:tumorSize===null?"not-allowed":"pointer", opacity:tumorSize===null?0.4:1 }} />
                   {[20,50].map(v=>(
                     <div key={v} style={{ position:"absolute", top:-4, left:`${((v-1)/79)*100}%`, transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
                   ))}
                 </div>
-                <button onClick={()=>setTumorSize(v => v===null?20:Math.min(80,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
+                <button onClick={()=>applyTumorSize(v => v===null?20:Math.min(80,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
                 <span style={{ fontSize:13, fontWeight:700, minWidth:48, textAlign:"right", color:"#1a5fa8" }}>
                   {tumorSize===null ? "—" : `${tumorSize} mm`}
                 </span>
@@ -1455,8 +1474,11 @@ function App() {
               <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                 {T_ITEMS.map(t=>(
                   <TnmBtn key={t} label={t} active={activeT===t} onToggle={()=>{
-                    if (t === "T4") { setSelT(selT==="T4"?null:"T4"); setTumorSize(null); }
-                    else { const cur = !tumorSize && selT===t; setSelT(cur?null:t); setTumorSize(null); }
+                    // 統一ハンドラ：現在の活性値(activeT)基準でトグル。ボタンを押したら数値スライダーはクリア（同期上書き）。
+                    const on = activeT===t;
+                    setSelT(on ? null : t);
+                    setTumorSize(null);
+                    if (on || t !== "T4") setSelT4sub(null);   // T4以外を選ぶ/T4を外す→亜分類をクリア
                   }} />
                 ))}
               </div>
@@ -1480,17 +1502,17 @@ function App() {
             <div>
               <RowLabel>N — リンパ節</RowLabel>
               <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:10, background:"#f8faff", borderRadius:8, padding:"8px 10px" }}>
-                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>転移疑い</span>
-                <button onClick={()=>setLymphCount(v => v===null?0:Math.max(0,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
+                <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:58 }}>pN個数</span>
+                <button onClick={()=>applyLymphCount(v => v===null?0:Math.max(0,v-1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>◀</button>
                 <div style={{ position:"relative", flex:1 }}>
                   <input type="range" min={0} max={20} value={lymphCount ?? 0} disabled={lymphCount===null}
-                    onChange={e=>setLymphCount(Number(e.target.value))}
+                    onChange={e=>applyLymphCount(Number(e.target.value))}
                     style={{ width:"100%", accentColor:"#1a5fa8", cursor:lymphCount===null?"not-allowed":"pointer", opacity:lymphCount===null?0.4:1 }} />
                   {[1,4,10].map(v=>(
                     <div key={v} style={{ position:"absolute", top:-4, left:`${(v/20)*100}%`, transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
                   ))}
                 </div>
-                <button onClick={()=>setLymphCount(v => v===null?0:Math.min(20,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
+                <button onClick={()=>applyLymphCount(v => v===null?0:Math.min(20,v+1))} style={{ padding:"2px 8px", borderRadius:6, border:"1px solid #d4dae4", background:"#fff", cursor:"pointer", fontSize:12 }}>▶</button>
                 <span style={{ fontSize:13, fontWeight:700, minWidth:36, textAlign:"right", color:"#1a5fa8" }}>
                   {lymphCount===null ? "—" : `${lymphCount}個`}
                 </span>
@@ -1499,20 +1521,15 @@ function App() {
               <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
                 {N_ITEMS.map(n=>(
                   <TnmBtn key={n} label={n} active={activeN===n} onToggle={()=>{
-                    if (lymphCount !== null) setLymphCount(null);
-                    setSelN(selN===n?null:n);
+                    // 統一ハンドラ：activeN基準でトグル。ボタンを押したら個数スライダーはクリア（同期上書き）。
+                    const on = activeN===n;
+                    setLymphCount(null);
+                    setSelN(on ? null : n);
                   }} />
                 ))}
               </div>
-              {showNCount && (
-                <div style={{ marginTop:7 }}>
-                  <div style={{ fontSize:11, fontWeight:700, color:"#888", marginBottom:5 }}>N1 転移個数</div>
-                  <SegBtn options={["1-3","4+"]} value={activeNCount} onChange={v=>{
-                    if (lymphCount !== null) setLymphCount(null);
-                    setNCount(v);
-                  }} small />
-                </div>
-              )}
+              {/* 【v2.1.15】N1個数(1-3/4+)セグメントは廃止。個数≥4はN2へ自動昇格するため
+                  「N1かつ4個」が構造的に生成不能となり、旧セグメントは不要（③）。 */}
               {activeN && <div style={{ marginTop:5, fontSize:11, color:"#888" }}>→ {N_DESC[activeN]}</div>}
             </div>
 
@@ -1545,7 +1562,7 @@ function App() {
             )}
 
             {/* Oncotype DX */}
-            {biomarkersComplete && isOncotypeDxEligible(subtype, activeN, activeNCount) && !isM1 && (
+            {biomarkersComplete && isOncotypeDxEligible(subtype, activeN, grade, ki67) && !isM1 && (
               <div>
                 <RowLabel>Oncotype DX（術前は医療保険未承認）</RowLabel>
                 <SegBtn options={["低リスク","中リスク","高リスク","未施行"]} value={oncotype} onChange={setOncotype} small />
@@ -1686,7 +1703,7 @@ function App() {
                 <PfsPanel
                   anat={anat} subtype={subtype} menopause={menopause}
                   primaryTx={primaryTx} surgery={surgery}
-                  n={activeN} nCount={activeNCount} t={activeT} grade={grade}
+                  n={activeN} t={activeT} grade={grade}
                 />
               </>
             )}
@@ -1696,7 +1713,7 @@ function App() {
               <TreatmentScheduleTable
                 primaryTx={primaryTx} subtype={subtype}
                 surgery={surgery} lymphNode={lymphNode} menopause={menopause}
-                anat={anat} n={activeN} nCount={activeNCount} t={activeT} grade={grade}
+                anat={anat} n={activeN} t={activeT} grade={grade} ki67={ki67}
               />
             )}
 

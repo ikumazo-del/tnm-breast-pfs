@@ -1,7 +1,7 @@
 /* 乳がんTNM-PFS PWA Service Worker
    方針: network-first（常に最新を取りに行き、失敗時のみキャッシュへフォールバック）
    ★更新時は必ず CACHE_NAME を bump すること（旧キャッシュは activate で削除） */
-const CACHE_NAME = 'tnm-pfs-v2.1.14';
+const CACHE_NAME = 'tnm-pfs-v2.1.17';
 
 const CORE = [
   './',
