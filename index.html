@@ -989,7 +989,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
 }
 
 // ── 5年PFSパネル ──────────────────────────────────────────────────────
-function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade }) {
+function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade, ki67 }) {
   const [expanded, setExpanded] = useState(true);
   if (!anat || !subtype || anat === "invalid" || anat === "IV" || anat === "0") return null;
   // 閉経状態フラグ（Unit 2で閉経前HR+レジメンの出し分けに使用）
@@ -1018,6 +1018,16 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade })
   const mainRows = dataWithOla.filter(it => it.tag !== "別枠");
   const altRows  = dataWithOla.filter(it => it.tag === "別枠");
 
+  // 【v2.1.18】カタログ思想：症例に適応しない行も"値は残し"、目立つ「本症例は適応外」注釈を出す。
+  //   行を隠すのではなく〈誰の値か〉を明示して誤読を防ぐ＝背骨の集団偽装対策と同じ精神。
+  //   ※現状の対象はアベマ行のみ（PFSパネルでゲート無し＝常時表示のため）。S-1はreq.nPlusで非表示・olaparibは適応時のみ注入。
+  const rowNotIndicated = (item) => {
+    if (subtype === "HR+/HER2-" && item.label.includes("アベマシクリブ") && !isAbemaciclib(n, t, grade, ki67)) {
+      return "本症例は適応外：monarchE基準（腋窩1–3個＋Grade3／pT3以上／Ki-67≥20%、または腋窩4個以上）を満たしません";
+    }
+    return null;
+  };
+
   const maxPfs = 100;
 
   const pfsColor = (v) => {
@@ -1031,6 +1041,7 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade })
   const renderBar = (item, i, isAlt) => {
     const { bar: barGrad, txt: txtCol } = pfsColor(item.pfs);
     const barW = `${item.pfs}%`;
+    const notIndicated = rowNotIndicated(item);   // 本症例で適応外なら理由文字列
     // pCR枝の術前後レジメン分岐（Swain 2022, 4y EFS）: III期pCR=90(PH→H既定)にH→H/PH→PH内訳を併記
     const showSwain = isIII && item.label.includes("pCR") && item.pfs === 90;
     // 術前療法系の行を手術先行で選んでいる場合の参考注記
@@ -1039,13 +1050,17 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade })
     return (
       <div key={(isAlt?"a":"m")+i} style={{
         background: isAlt ? "#fbf9f2" : "#fff",
-        border: item.type === "trial" ? "1.5px solid #bacede" : "1.5px dashed #ccd8e8",
+        border: notIndicated ? "1.5px solid #e0a030" : item.type === "trial" ? "1.5px solid #bacede" : "1.5px dashed #ccd8e8",
         borderRadius:8, padding:"9px 12px",
         opacity: showSurgeryFirstNote ? 0.82 : 1,
       }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:5 }}>
           <div style={{ flex:1, paddingRight:10 }}>
             <span style={{ fontSize:12, color:"#222", fontWeight:600, lineHeight:1.5 }}>{item.label}</span>
+            {notIndicated && (
+              <span style={{ marginLeft:6, fontSize:10, background:"#e0820a", color:"#fff",
+                borderRadius:3, padding:"1px 6px", fontWeight:800, verticalAlign:"middle" }}>本症例は適応外</span>
+            )}
             {item.type === "trial" && (
               <span style={{ marginLeft:6, fontSize:10, background:"#2a6aaa", color:"#fff",
                 borderRadius:3, padding:"1px 5px", fontWeight:700, verticalAlign:"middle" }}>RCT</span>
@@ -1070,6 +1085,13 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade })
         <div style={{ background:"#eaeff7", borderRadius:6, height:12, overflow:"hidden", marginBottom:4 }}>
           <div className="pfs-bar" style={{ "--bar-w": barW, height:"100%", borderRadius:6, width: barW, background: barGrad }} />
         </div>
+        {notIndicated && (
+          <div style={{ fontSize:11, color:"#7a4400", background:"#fff2d8", border:"1.5px solid #e0a030",
+            borderRadius:5, padding:"5px 9px", marginBottom:4, lineHeight:1.6, fontWeight:600 }}>
+            ⚠️ {notIndicated}<br />
+            <span style={{ fontWeight:500, color:"#9a6a20" }}>（この値は monarchE 適格集団の報告値です。比較の参考として残しています）</span>
+          </div>
+        )}
         {showSwain && (
           <div style={{ fontSize:10, color:"#3a6a4a", background:"#eef7f0", border:"1px solid #cce4d4",
             borderRadius:5, padding:"4px 8px", marginBottom:4, lineHeight:1.6 }}>
@@ -1703,7 +1725,7 @@ function App() {
                 <PfsPanel
                   anat={anat} subtype={subtype} menopause={menopause}
                   primaryTx={primaryTx} surgery={surgery}
-                  n={activeN} t={activeT} grade={grade}
+                  n={activeN} t={activeT} grade={grade} ki67={ki67}
                 />
               </>
             )}
