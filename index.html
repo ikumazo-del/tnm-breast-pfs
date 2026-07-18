@@ -1414,6 +1414,69 @@ function App() {
   const applyTumorSize = (updater) => { setTumorSize(updater); setSelT(null); setSelT4sub(null); };
   const applyLymphCount = (updater) => { setLymphCount(updater); setSelN(null); };
 
+  // 【v2.1.19】Word(.doc)出力：HTML→application/msword（追加依存ゼロ・オフライン維持・A方式）。
+  //   現行 window.print()（PDF）は温存し、編集用の .doc を"追加"する（IwaoK決裁6便目）。
+  //   体裁は印刷と同一（#print-area から .no-print を除いた subtree＝Word ≡ PDF）。
+  //   ★背骨：Word出力は編集可能＝ユーザーが値を書き換えられる。免責文を出力ファイル自身に必ず埋め込む
+  //     （DOM由来の免責パネルの有無に依存しない・常時フッタ埋め込み）。
+  //   ファイル名：患者氏名は入れない（＝de-identified・共有フォルダのリスト上でPIIが漏れない）／
+  //     氏名は本文ヘッダには載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
+  function buildExportFilename() {
+    const na = (v) => (v == null ? "na" : v);
+    const tnm = `${na(activeT)}${na(activeN)}${na(selM)}`;
+    const bio = `ER${na(er)}PgR${na(pr)}HER2${na(her2)}`;
+    const d = new Date();
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    // "+"/"-" は可読なので残す。ファイル名に使えない "/ \ : * ? " < > |" のみ除去。
+    return (`TNM_${tnm}_${bio}_${iso}`).replace(/[\/\\:*?"<>|]/g, "") + ".doc";
+  }
+
+  function exportWord() {
+    const src = document.getElementById("print-area");
+    if (!src) return;
+    const clone = src.cloneNode(true);
+    clone.querySelectorAll(".no-print").forEach((el) => el.remove());  // 画面専用要素は出力しない＝印刷と同一体裁
+
+    const genDate = new Date().toLocaleDateString("ja-JP", { year:"numeric", month:"long", day:"numeric" });
+    const idLine = [patientName ? `患者：${patientName}` : "", age ? `${age}歳` : ""].filter(Boolean).join("　");
+
+    const header =
+      '<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">乳がん TNM分類・治療方針</div>' +
+      '<div style="font-size:11px;color:#666;margin-bottom:14px;border-bottom:1px solid #ccc;padding-bottom:8px;">' +
+      (idLine ? idLine + '　／　' : '') + '生成日：' + genDate + '　／　乳がんTNM-PFS v2.1.19（AJCC 8th）</div>';
+
+    // ★免責フッタ＝出力ファイル自身に常時埋め込む（DOMの免責パネルに依存しない・背骨）
+    const disclaimer =
+      '<div style="margin-top:18px;padding:10px 12px;border:1px solid #d0aa66;background:#fbf6ea;' +
+      'font-size:10.5px;color:#664;line-height:1.7;">' +
+      '⚠️ <b>本書は編集可能な参考資料です。</b>記載の予後数値は主要RCT（欧米試験データが中心）の報告値に基づく' +
+      '<b>参考値</b>で、指標（iDFS／DFS／EFS 等）・観察時点・対象集団は項目ごとに異なり、日本人での値と乖離する' +
+      '可能性があります。個々の患者さんの状況・合併症・全身状態により大きく異なります。' +
+      '<b>治療方針の最終決定は、腫瘍内科・集学的カンファレンスの判断を優先してください。</b>' +
+      'この .doc は編集可能なため、数値の改変にご注意ください。</div>';
+
+    const html =
+      '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+      'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+      '<head><meta charset="utf-8"><title>乳がん TNM分類・治療方針</title>' +
+      '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View>' +
+      '<w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->' +
+      '<style>body{font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;font-size:12px;color:#222;}' +
+      '@page{size:A4;margin:1.6cm;}</style></head><body>' +
+      header + clone.innerHTML + disclaimer +
+      '</body></html>';
+
+    const blob = new Blob(['\ufeff', html], { type: "application/msword" });   // BOMでWordのUTF-8認識を安定化
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = buildExportFilename();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
   const hasInput = activeT||activeN||selM||er||pr||her2||grade||patientName||age||menopause||surgery||primaryTx||lymphNode;
   const today = new Date().toLocaleDateString("ja-JP", { year:"numeric", month:"long", day:"numeric" });
   const showSchedule = treatment && biomarkersComplete && (primaryTx || surgery);
@@ -1739,20 +1802,32 @@ function App() {
               />
             )}
 
-            {/* Print button */}
+            {/* Export buttons（PDF＝印刷ダイアログ／Word＝編集用.doc・2ボタン構成 v2.1.19）*/}
             {treatment && biomarkersComplete && (
-              <button
-                className="no-print"
-                onClick={()=>window.print()}
-                style={{
-                  marginTop:8, padding:"12px", borderRadius:10, border:"none",
-                  background:"linear-gradient(135deg, #2a7a4a 0%, #3a9a5a 100%)",
-                  color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer",
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                  boxShadow:"0 3px 10px rgba(42,122,74,0.3)",
-                }}>
-                🖨️ 印刷 / PDF で保存
-              </button>
+              <div className="no-print" style={{ marginTop:8, display:"flex", gap:8, flexWrap:"wrap" }}>
+                <button
+                  onClick={()=>window.print()}
+                  style={{
+                    flex:"1 1 180px", padding:"12px", borderRadius:10, border:"none",
+                    background:"linear-gradient(135deg, #2a7a4a 0%, #3a9a5a 100%)",
+                    color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                    boxShadow:"0 3px 10px rgba(42,122,74,0.3)",
+                  }}>
+                  🖨️ 印刷 / PDF で保存
+                </button>
+                <button
+                  onClick={exportWord}
+                  style={{
+                    flex:"1 1 180px", padding:"12px", borderRadius:10, border:"none",
+                    background:"linear-gradient(135deg, #1a5fa8 0%, #2a7fc8 100%)",
+                    color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                    boxShadow:"0 3px 10px rgba(26,95,168,0.3)",
+                  }}>
+                  📝 Word（.doc）で保存
+                </button>
+              </div>
             )}
 
           </div>
