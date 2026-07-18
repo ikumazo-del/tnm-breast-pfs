@@ -1414,47 +1414,64 @@ function App() {
   const applyTumorSize = (updater) => { setTumorSize(updater); setSelT(null); setSelT4sub(null); };
   const applyLymphCount = (updater) => { setLymphCount(updater); setSelN(null); };
 
-  // 【v2.1.19】Word(.doc)出力：HTML→application/msword（追加依存ゼロ・オフライン維持・A方式）。
-  //   現行 window.print()（PDF）は温存し、編集用の .doc を"追加"する（IwaoK決裁6便目）。
-  //   体裁は印刷と同一（#print-area から .no-print を除いた subtree＝Word ≡ PDF）。
-  //   ★背骨：Word出力は編集可能＝ユーザーが値を書き換えられる。免責文を出力ファイル自身に必ず埋め込む
-  //     （DOM由来の免責パネルの有無に依存しない・常時フッタ埋め込み）。
-  //   ファイル名：患者氏名は入れない（＝de-identified・共有フォルダのリスト上でPIIが漏れない）／
-  //     氏名は本文ヘッダには載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  function buildExportFilename() {
+  // 【v2.1.19→v2.1.20】結果の外部出力。HTML製アプリなので2系統：
+  //   🌐HTML＝無劣化コピー（Word翻訳を通さない＝flex段組み・バー・色箱そのまま／ブラウザで開いて印刷→PDF可）、
+  //   📝Word(.doc)＝編集用（HTML→application/msword・追加依存ゼロ・オフライン維持・A方式）。
+  //   旧🖨️PDFボタンは廃止＝HTML経由の「印刷→PDF」で綺麗に代替できるため（IwaoK決裁 2026-07-18）。
+  //   どちらも #print-area から .no-print を除いた subtree を出力（＝画面の結果と同一体裁）。
+  //   ★背骨：出力物は編集可能＝値を書き換えられる。免責文を出力ファイル自身に常時埋め込む
+  //     （DOM由来の免責パネルの有無に依存しない）。
+  //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
+  //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
+  const APP_VER = "v2.1.20";
+
+  function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
     const tnm = `${na(activeT)}${na(activeN)}${na(selM)}`;
     const bio = `ER${na(er)}PgR${na(pr)}HER2${na(her2)}`;
     const d = new Date();
     const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     // "+"/"-" は可読なので残す。ファイル名に使えない "/ \ : * ? " < > |" のみ除去。
-    return (`TNM_${tnm}_${bio}_${iso}`).replace(/[\/\\:*?"<>|]/g, "") + ".doc";
+    return (`TNM_${tnm}_${bio}_${iso}`).replace(/[\/\\:*?"<>|]/g, "");
   }
 
-  function exportWord() {
+  // 結果本体（画面専用要素を除いた subtree）＋タイトル/患者ヘッダ を組み立てる（.doc/.html 共通）
+  function buildResultBody() {
     const src = document.getElementById("print-area");
-    if (!src) return;
+    if (!src) return null;
     const clone = src.cloneNode(true);
-    clone.querySelectorAll(".no-print").forEach((el) => el.remove());  // 画面専用要素は出力しない＝印刷と同一体裁
-
+    clone.querySelectorAll(".no-print").forEach((el) => el.remove());
     const genDate = new Date().toLocaleDateString("ja-JP", { year:"numeric", month:"long", day:"numeric" });
     const idLine = [patientName ? `患者：${patientName}` : "", age ? `${age}歳` : ""].filter(Boolean).join("　");
-
     const header =
       '<div style="font-size:16px;font-weight:700;color:#111;margin-bottom:4px;">乳がん TNM分類・治療方針</div>' +
       '<div style="font-size:11px;color:#666;margin-bottom:14px;border-bottom:1px solid #ccc;padding-bottom:8px;">' +
-      (idLine ? idLine + '　／　' : '') + '生成日：' + genDate + '　／　乳がんTNM-PFS v2.1.19（AJCC 8th）</div>';
+      (idLine ? idLine + '　／　' : '') + '生成日：' + genDate + '　／　乳がんTNM-PFS ' + APP_VER + '（AJCC 8th）</div>';
+    return { header, inner: clone.innerHTML };
+  }
 
-    // ★免責フッタ＝出力ファイル自身に常時埋め込む（DOMの免責パネルに依存しない・背骨）
-    const disclaimer =
-      '<div style="margin-top:18px;padding:10px 12px;border:1px solid #d0aa66;background:#fbf6ea;' +
+  // ★免責フッタ＝出力ファイル自身に常時埋め込む（DOMの免責パネルに依存しない・背骨）
+  function buildDisclaimer(fmt) {
+    return '<div style="margin-top:18px;padding:10px 12px;border:1px solid #d0aa66;background:#fbf6ea;' +
       'font-size:10.5px;color:#664;line-height:1.7;">' +
       '⚠️ <b>本書は編集可能な参考資料です。</b>記載の予後数値は主要RCT（欧米試験データが中心）の報告値に基づく' +
       '<b>参考値</b>で、指標（iDFS／DFS／EFS 等）・観察時点・対象集団は項目ごとに異なり、日本人での値と乖離する' +
       '可能性があります。個々の患者さんの状況・合併症・全身状態により大きく異なります。' +
       '<b>治療方針の最終決定は、腫瘍内科・集学的カンファレンスの判断を優先してください。</b>' +
-      'この .doc は編集可能なため、数値の改変にご注意ください。</div>';
+      'この ' + fmt + ' は編集可能なため、数値の改変にご注意ください。</div>';
+  }
 
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  function exportWord() {
+    const body = buildResultBody();
+    if (!body) return;
     const html =
       '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
       'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
@@ -1463,18 +1480,28 @@ function App() {
       '<w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]-->' +
       '<style>body{font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;font-size:12px;color:#222;}' +
       '@page{size:A4;margin:1.6cm;}</style></head><body>' +
-      header + clone.innerHTML + disclaimer +
+      body.header + body.inner + buildDisclaimer(".doc") +
       '</body></html>';
+    triggerDownload(new Blob(['\ufeff', html], { type: "application/msword" }), buildExportBasename() + ".doc");  // BOMでWordのUTF-8認識を安定化
+  }
 
-    const blob = new Blob(['\ufeff', html], { type: "application/msword" });   // BOMでWordのUTF-8認識を安定化
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = buildExportFilename();
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  // 【v2.1.20】HTML出力：無劣化コピー。アプリの背景色・PFSバーのgrow CSSも同梱し「このまま」の見た目を再現。
+  //   このHTMLをブラウザで開いて「印刷→PDFで保存」すれば、結果パネルそのままの綺麗なPDFになる（＝旧PDFボタンの代替）。
+  function exportHtml() {
+    const body = buildResultBody();
+    if (!body) return;
+    const html =
+      '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<title>乳がん TNM分類・治療方針</title>' +
+      '<style>*{box-sizing:border-box;margin:0;padding:0;}' +
+      'body{background:#f0f2f5;font-family:"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif;' +
+      'color:#222;padding:18px 12px 48px;}.wrap{max-width:520px;margin:0 auto;}' +
+      '@keyframes barGrow{from{width:0}to{width:var(--bar-w)}}.pfs-bar{animation:barGrow 0.6s ease forwards;}' +
+      '@media print{body{background:#fff;padding:0;}.wrap{max-width:100%;}}</style></head><body>' +
+      '<div class="wrap">' + body.header + body.inner + buildDisclaimer(".html") + '</div>' +
+      '</body></html>';
+    triggerDownload(new Blob([html], { type: "text/html;charset=utf-8" }), buildExportBasename() + ".html");
   }
 
   const hasInput = activeT||activeN||selM||er||pr||her2||grade||patientName||age||menopause||surgery||primaryTx||lymphNode;
@@ -1802,11 +1829,11 @@ function App() {
               />
             )}
 
-            {/* Export buttons（PDF＝印刷ダイアログ／Word＝編集用.doc・2ボタン構成 v2.1.19）*/}
+            {/* Export buttons（🌐HTML＝無劣化・印刷でPDF可／📝Word＝編集用.doc・2ボタン構成 v2.1.20）*/}
             {treatment && biomarkersComplete && (
               <div className="no-print" style={{ marginTop:8, display:"flex", gap:8, flexWrap:"wrap" }}>
                 <button
-                  onClick={()=>window.print()}
+                  onClick={exportHtml}
                   style={{
                     flex:"1 1 180px", padding:"12px", borderRadius:10, border:"none",
                     background:"linear-gradient(135deg, #2a7a4a 0%, #3a9a5a 100%)",
@@ -1814,7 +1841,7 @@ function App() {
                     display:"flex", alignItems:"center", justifyContent:"center", gap:8,
                     boxShadow:"0 3px 10px rgba(42,122,74,0.3)",
                   }}>
-                  🖨️ 印刷 / PDF で保存
+                  🌐 HTML で保存
                 </button>
                 <button
                   onClick={exportWord}
