@@ -91,6 +91,10 @@ const PFS_DATA = {
     "IIA": [
       { label:"手術 ＋ AI（アロマターゼ阻害薬）5年", pfs:90, type:"est", source:"ATAC/BIG1-98全体解析より調整" },
       { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:89, type:"est", source:"EBCTCG 2018メタ解析参照" },
+      // 【v2.1.21】IIAアベマ行の欠落を是正（IwaoK発見 2026-07-18）。T1N1M0=Stage IIA、T1N1+Grade3/Ki-67≥20はmonarchE適応
+      //   ＝方向性/スケジュール(isAbemaciclib)は出すのに治療別予後だけ片肺だった。非適応例（T2N0等）は既存カタログ機構が自動で適応外注記。
+      //   ★値はest限定：83.6%(monarchE ITT・高Stage中心)のtrial流用は集団偽装＋型偽装。IIA固有5y iDFSは試験未報告。
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", source:"按分: monarchE iDFS HR 0.680 を IIA基線(手術＋化学療法＋ET 89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜monarchE ITTは高Stage中心でIIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
       { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜N1以上で表示" },
       { label:"手術 ＋ タモキシフェン 5年", pfs:87, type:"est", source:"ATAC/BIG1-98対照群調整" },
     ],
@@ -244,6 +248,8 @@ const PFS_DATA_PREMENO = {
     "IIA": [
       { label:"手術 ＋ エキセメスタン ＋ OFS 5年（全体）", pfs:91.1, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 91.1%（E+OFS, HR 0.72 vs TAM+OFS）" },
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（全体）", pfs:87.3, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 87.3%（TAM+OFS）" },
+      // 【v2.1.21】閉経前IIAのアベマ行欠落を是正（閉経後IIAと対称・片肺を作らない）。値・type根拠は閉経後IIA行に準拠。
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", tp:"5年", source:"按分: monarchE iDFS HR 0.680 を 閉経前IIAの化学療法併用基線(化学療法＋OFS内分泌 ≈89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜E+OFS全体91.1%基準では≈94だが、化学療法併用の高リスク基線＋過大評価回避で閉経後IIAと同じ辛め92に統一（IwaoK決裁 2026-07-18）｜閉経前ETはOFS基盤｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜IIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜閉経前ETはOFS基盤｜N1以上で表示" },
     ],
     "IIB": [
@@ -1423,7 +1429,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.20";
+  const APP_VER = "v2.1.21";
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
