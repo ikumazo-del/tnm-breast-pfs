@@ -107,19 +107,19 @@ const PFS_DATA = {
       //   ＝方向性/スケジュール(isAbemaciclib)は出すのに治療別予後だけ片肺だった。非適応例（T2N0等）は既存カタログ機構が自動で適応外注記。
       //   ★値はest限定：83.6%(monarchE ITT・高Stage中心)のtrial流用は集団偽装＋型偽装。IIA固有5y iDFSは試験未報告。
       { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", source:"按分: monarchE iDFS HR 0.680 を IIA基線(手術＋化学療法＋ET 89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜monarchE ITTは高Stage中心でIIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（原著PDF未入手・按分推定＝est）｜N1以上で表示" },
       { label:"手術 ＋ タモキシフェン 5年", pfs:87, type:"est", source:"ATAC/BIG1-98対照群調整" },
     ],
     "IIB": [
       { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:83, type:"est", source:"EBCTCG / SEER統計調整" },
       { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET, HR 0.680）" },
       { label:"手術 ＋ ET単独（病期別按分）", pfs:80, type:"est", source:"按分: e_IIIA(1-0.76=0.24)÷monarchE N2/N1比1.176→IIB(N1相当)S≈80｜アンカー Rastogi monarchE JCO 2024 ITT対照(IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（孫引き・原著未入手）｜③型偽装是正: trial→est（POTENT孫引きにつき試験値ラベルを外す）｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（原著PDF未入手・按分推定＝est）｜③型偽装是正: trial→est（原著未照合につき試験値ラベルを外す）｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:84, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 5y iDFS 83.6%(Stage IIIA相当)→84｜type:est" },
       { label:"化学療法 ＋ 手術 ＋ ET（monarchE対照）", pfs:76, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT対照(Stage IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", req:{nPlus:true}, source:"Toi POTENT Lancet Oncol 2021 5y iDFS 87%基準(孫引き)・N+高Stage按分｜type:est｜N1以上で表示" },
+      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", req:{nPlus:true}, source:"Toi POTENT Lancet Oncol 2021 5y iDFS 87%基準(原著PDF未入手・按分推定)・N+高Stage按分｜type:est｜N1以上で表示" },
     ],
     "IIIB": [
       { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:80, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIB按分80｜type:est" },
@@ -262,13 +262,13 @@ const PFS_DATA_PREMENO = {
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（全体）", pfs:87.3, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 87.3%（TAM+OFS）" },
       // 【v2.1.21】閉経前IIAのアベマ行欠落を是正（閉経後IIAと対称・片肺を作らない）。値・type根拠は閉経後IIA行に準拠。
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", tp:"5年", source:"按分: monarchE iDFS HR 0.680 を 閉経前IIAの化学療法併用基線(化学療法＋OFS内分泌 ≈89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜E+OFS全体91.1%基準では≈94だが、化学療法併用の高リスク基線＋過大評価回避で閉経後IIAと同じ辛め92に統一（IwaoK決裁 2026-07-18）｜閉経前ETはOFS基盤｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜IIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（孫引き）｜閉経前ETはOFS基盤｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（原著PDF未入手・按分推定＝est）｜閉経前ETはOFS基盤｜N1以上で表示" },
     ],
     "IIB": [
       { label:"手術 ＋ エキセメスタン ＋ OFS 5年（N陽性）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）" },
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（N陽性）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）" },
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET; 閉経前ETはOFS基盤）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（孫引き）｜閉経前ETはOFS基盤｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（原著PDF未入手・按分推定＝est）｜閉経前ETはOFS基盤｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"手術 ＋ エキセメスタン ＋ OFS（病期別按分）", pfs:83, type:"est", tp:"5年", source:"按分: e_IIB(1-0.856=0.144)×monarchE N2/N1比1.176→S≈83｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)85.6%(E+OFS)、勾配 monarchE Nサブグループ相対比のみ｜type:est・指標混在(DFS基準×iDFS勾配)" },
@@ -499,6 +499,29 @@ const ADV_EVIDENCE = {
     short: "※【重要な副作用】間質性肺疾患（肺の炎症）：エンハーツで特に注意（「警告」の筆頭・まれに重症/死亡例あり）。HER2低発現の試験では全体11〜12%、日本人は2割前後（DESTINY-Breast04で26.8%・Breast06で20.0%）。" + ILD_COMMON_SHORT_TAIL,
     source:"第一三共『エンハーツ点滴静注用100mg 適正使用ガイド（乳癌・非小細胞肺癌・胃癌・固形癌）』RMPm 2026年3月改訂 p20「2.重要な副作用(1)間質性肺疾患／発現状況／【乳癌】《臨床試験》HER2低発現又は超低発現の手術不能又は再発乳癌患者」（ILD独立判定委員会判定｜cutoff DB-04 2022-01-11／DB-06 2024-03-18）｜DESTINY-Breast06：全体434例中49例 11.3%・日本人35例中7例 20.0%・G5 全体3例 0.7%・日本人1例 2.9%／DESTINY-Breast04：全体371例中45例 12.1%・日本人56例中15例 26.8%・G5 3例 0.8%｜［警告］ILDにより死亡例が報告・呼吸器精通医と連携／［7.用法及び用量に関連する注意］Grade1でも投与中止・原則再開不可｜★v2.1.12で未照合だったDB-06日本人20.0%（7/35）を本セッションでClaude現物照合完了（source注記「IwaoK確認・Claude未照合」→「Claude照合済」に更新／PENDING A-4消化）｜Claude現物照合済 2026-07-16（適正使用ガイドp20発現状況表）"
   },
+  // ★★v2.1.23：M1網羅原則（v27の背骨）に基づき、試験名のみ・数値ゼロだった3枝に一次照合済の数値を配線。
+  //   いずれも type:"trial"（efficacy）＝est/trial カウントは trial 47→50（+3）。est不変。
+  //   ★原著PDFは当セッションに無い。数値・HR・解析ステータスは前セッション（申し送りv27）の照合記録に拠る。
+  //     source末尾に「前セッション照合／当セッション未再照合」を明記＝出典偽装（照合の顔で未照合を出す）の回避。
+  //   【集団固定】3件とも population で「誰の値か」を固定。特に KEYNOTE-355 は CPS≥10 限定（閾値未満で効果消失）＝集団偽装対策の要。
+  CAPITELLO291_PFS: {
+    trial:"CAPItello-291", value:"病気が進行しないでいられた期間（無増悪生存）中央値 7.3か月 vs 3.1か月（フルベストラント単独と比較）", type:"trial",
+    analysis:"PIK3CA / AKT1 / PTEN のいずれかに変異のある方を対象にした、主要な解析のひとつ（2つある主要評価項目の片方）です。統計学的に意味のある差が示されています（ハザード比 0.50、95%信頼区間 0.38–0.65）。なお、変異の有無を問わない全体集団（708人）でのハザード比 0.60 は、別の集団の値です。全生存期間（OS）は「悪化させないこと」を確かめる設計の解析で、延命を示す段階には至っていません",
+    population:"ホルモン受容体陽性・HER2陰性の転移・再発乳がんで、アロマターゼ阻害薬による治療の最中／後に進行し、PIK3CA・AKT1・PTEN のいずれかに変異がある方（289人）。変異のない方の値ではありません",
+    source:"Turner, NEJM 2023;388:2058-70（CAPItello-291）：AKT経路変異例289例 PFS 7.3 vs 3.1か月｜HR 0.50(0.38–0.65)｜【軸1】AKT経路変異集団のPFSは2つの主要評価項目の一方（dual primary・全体集団PFSと並置）｜全体708例のPFS HR 0.60(0.51–0.71)は別集団｜【軸2a】OSは no detriment（悪化がないことの確認）解析枠＝延命効果は未確定｜★前セッション（申し送りv27）で原著照合との記録あり／当セッションでは原著PDF未再照合"
+  },
+  TROPION_PFS: {
+    trial:"TROPION-Breast01", value:"病気が進行しないでいられた期間（無増悪生存）中央値 6.9か月 vs 4.9か月（医師が選んだ化学療法と比較）", type:"trial",
+    analysis:"この試験の主要な解析のひとつ（2つある主要評価項目の片方＝画像による中央判定での無増悪生存）です。統計学的に意味のある差が示されています（ハザード比 0.63、95%信頼区間 0.52–0.76）。全生存期間（OS）はまだデータが十分に集まっておらず（成熟度23.4%）、ハザード比 0.84 は傾向を示す段階にとどまります",
+    population:"ホルモン受容体陽性・HER2陰性の転移・再発乳がんで、内分泌療法のあと、転移に対する化学療法を1〜2回受けたのちに進行した方（732人・ITT）",
+    source:"Bardia, JCO 2024;42:2110-22（TROPION-Breast01）：BICR判定PFS 6.9 vs 4.9か月｜HR 0.63(0.52–0.76)｜【軸1】BICR判定PFSは2つの主要評価項目の一方（dual primary）｜【軸2a】OSは未成熟（イベント成熟度23.4%）・HR 0.84＝trend止まり（延命効果は未確定）｜★前セッション（申し送りv27）で原著照合との記録あり／当セッションでは原著PDF未再照合"
+  },
+  KEYNOTE355_OS: {
+    trial:"KEYNOTE-355", value:"全生存期間 中央値 23.0か月 vs 16.1か月（化学療法単独と比較）", type:"trial",
+    analysis:"PD-L1 が CPS 10以上の方を対象にした解析で、統計学的に意味のある差が示されています（ハザード比 0.73、95%信頼区間 0.55–0.95、P=0.0185／有意とみなす基準は P<0.0227）。★この効果は CPS 10以上に限られます：CPS 1以上（ハザード比 0.86）は有意ではなく、全体集団は改めての検定をしておらず、CPS 1〜9 ではハザード比 1.09（むしろ不利の側）です。だから「PD-L1 CPS 10以上」という集団を外して読むことはできません",
+    population:"トリプルネガティブ（ホルモン受容体もHER2も陰性）の転移・再発乳がんで、転移に対する薬物療法をまだ受けておらず、PD-L1 が CPS 10以上の方（323人）。CPS 10未満の方の値ではありません",
+    source:"Cortés, NEJM 2022;387:217-26（KEYNOTE-355 最終OS解析）：CPS≥10 OS 23.0 vs 16.1か月｜HR 0.73(0.55–0.95), P=0.0185（有意水準 P<0.0227）｜【軸1】CPS≥10集団のOSは事前規定・有意｜【軸2b・★集団固定必須】CPS≥1 HR 0.86（非有意）／ITT HR 0.89（検定せず）／CPS 1–9 HR 1.09／CPS<1 0.97＝閾値10未満で効果消失。この値をCPS≥10以外へ広げるな｜★前セッション（申し送りv27）で原著照合との記録あり／当セッションでは原著PDF未再照合"
+  },
 };
 
 // 患者向けテキスト組み立て。population と analysis を必ず本文に出す（＝集団ラベルと解析ステータスを構造で強制する）。
@@ -676,7 +699,7 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
         evText("PALOMA2_OS"),
         "▸ まとめ：アベマシクリブでは、病気の進行を抑えられる期間が延びることが示されています（上記）。一方、生存期間（全生存期間）については、アベマシクリブ・パルボシクリブのいずれも、統計学的に意味のある延長は示されていません。"
       ])},
-      { cat:"2次治療：内分泌療法変更 ± CDK4/6 / AKT阻害薬", items:["フルベストラント（ファスロデックス）± CDK4/6阻害薬継続または変更","PIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）＋ フルベストラント（2024年5月承認）","【根拠】MONARCH-2、CAPItello-291試験"]},
+      { cat:"2次治療：内分泌療法変更 ± CDK4/6 / AKT阻害薬", items:["フルベストラント（ファスロデックス）± CDK4/6阻害薬継続または変更","PIK3CA/AKT変異陽性例：カピバセルチブ（トルカプ）＋ フルベストラント（2024年5月承認）","【根拠】MONARCH-2試験", evText("CAPITELLO291_PFS")]},
       // 【v2.1.5・§3-A】HR+/HER2- M1 のオラパリブ本体行。v2.1.4ではコンパニオン診断項が「PARP阻害薬が選択肢になります」と約束しながら、
       //   どの治療ラインにも薬剤が出てこなかった（説明文と治療ラインの不整合／TNBC枝との非対称）。ここで閉じる。
       // 【置き場所の根拠】OlympiAD原著（Robson NEJM 2017）:
@@ -713,7 +736,8 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
         evText("OLYMPIAD_SAFETY"),
         evText("OLYMPIAD_HRSUB") + "\n▸ この試験はサブグループごとの差を判定できる設計ではありません（原著の記載）",
         "── 上記以外（BRCA変異がない／未検査の場合）──\n単剤化学療法：パクリタキセル、エリブリン（ハラヴェン）、カペシタビン、ゲムシタビン 等",
-        "ダトポタマブ デルクステカン（ダトロウェイ）：抗TROP-2 ADC（2024年12月承認）\n【根拠】TROPION-Breast01試験 ※担当医にご確認ください"
+        "ダトポタマブ デルクステカン（ダトロウェイ）：抗TROP-2 ADC（2024年12月承認）",
+        evText("TROPION_PFS")
       ]},
     ];
     if (subtype === "HER2+" || subtype === "HR+/HER2+") return [
@@ -769,7 +793,8 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
       // 【v2.1.9・§3-B-2】PD-L1陰性の枝を追加。方向性側に陽性枝しかなく（スケジュール側にはあった＝層間非対称）、
       //   PD-L1陰性の方が「キイトルーダ」の行だけを読んで自分の薬と誤読し得た。＝§0の中核原則（非適応薬を前に出さない）の違反。
       { cat:"1次治療：化学療法 ± 免疫療法", items:[
-        "── PD-L1陽性（CPS 10以上）の場合 ──\nペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル または ゲムシタビン＋カルボプラチン\n【根拠】KEYNOTE-355試験",
+        "── PD-L1陽性（CPS 10以上）の場合 ──\nペムブロリズマブ（キイトルーダ）＋ ナブパクリタキセル または ゲムシタビン＋カルボプラチン",
+        evText("KEYNOTE355_OS"),
         "── PD-L1陰性（CPS 10未満）の場合 ──\n化学療法（タキサン系・アントラサイクリン系 等）\n※ ペムブロリズマブ（キイトルーダ）は併用しません"
       ]},
       // 【v2.1.9・§3-A-2（IwaoK決裁：TNBCのPARP＝「化学療法の代わり（耐性後）」）】
