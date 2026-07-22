@@ -1,7 +1,7 @@
 {
-  "name": "乳がん TNM分類・治療方針",
+  "name": "乳がん TNM分類・治療方針案",
   "short_name": "TNM-PFS",
-  "description": "AJCC 8th準拠のTNM分類と、5年PFSエビデンス（一次資料検証済み）を提示するツール",
+  "description": "AJCC 8th準拠のTNM分類と、5年PFSエビデンス（一次資料検証済み）を提示する治療方針案ツール（IwaoK™️）。世界医師会ポルト声明のPITL（医師参加型）に基づく補助ツール。",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -10,7 +10,17 @@
   "theme_color": "#1a5fa8",
   "lang": "ja",
   "icons": [
-    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
