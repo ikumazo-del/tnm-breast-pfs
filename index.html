@@ -77,10 +77,33 @@ const STAGE_COLOR = {
 //  ★「2次治療以降は原則範囲外」は M0 の原則。M1 に適用して枝を消すな（＝片肺を作る誘惑）。
 //  ★網羅の代償＝ライン番号の誤読。各ライン枝には「臨床上の置き方であって承認が順番を
 //    決めるわけではない」旨の▸注記を添える（下記 M1_LINE_DISCLAIMER＝方向性ブロック末尾に1回）。
+// ══ §0-3【v2.1.24】POTENT断定昇格＋閉経前IIIA/IIIB・閉経後IIIBのS-1片肺是正（IwaoK決裁 2026-07-20）══
+//  (1) 実装1: 既存S-1行5本（閉経後IIA/IIB/IIIA・閉経前IIA/IIB）のsourceを「原著PDF未入手」→「原著Claude照合済 2026-07-20」へ。
+//      数値・型は不変（病期別絶対値は原著になし＝按分ゆえest維持）。全体値/HR/OS非有意の注記を各行に固定。
+//  (2) 実装2: 閉経前IIIA S-1を新設（片肺是正・閉経後IIIA S-1と対称）。
+//  (3) 実装3: 閉経後IIIB・閉経前IIIB のS-1を新設（適格stage I–IIIB内）。★IIICは適格外につき追加しない（＝正しい非表示・片肺ではない）。
+//  ・上乗せHR: N+はPOTENT LN陽性サブHR 0.70(0.52–0.93)を採用（辛め＝過大評価回避／IwaoK決裁a）。N0高リスクは本版では枝を作らず要決裁（本コミットの申し送り参照）。
+//  ・新規S-1値の整合方針: POTENTは閉経別S-1サブHRを報告しないため、S-1アームの病期別値は閉経で分けず、閉経後の同病期値に一致させ単調性を担保。
+//      → S-1族の最終形: 閉経後 IIA91/IIB87/IIIA81/IIIB80(新)｜閉経前 IIA87/IIB87/IIIA81(新)/IIIB80(新)（いずれも単調・全てN+ゲート）。
+//  ・型カウント: est +3（閉経後IIIB／閉経前IIIA／閉経前IIIB）＝ 83 → 86。trialは不変。★audit.js期待値をest=86へ更新すること。
+//    （現行コードのgrep実測: trial=51。申し送りv29記載の"trial 50"とは1件差＝要照合。本コミットはtrialを一切増減していない。）
+//  ・N0高リスクの扱い（IwaoK決裁 2026-07-20・②注記のみ折衷）: 数値バーは作らず、治療カタログに「TS-1はN0でも中〜高リスクはPOTENT適格・ただしIITL（カンファレンス）判断」注記を1本。
+//      発火近似ゲート＝Grade3／T3・T4／Ki-67≥20%（本文で確認可能な因子）。精密閾値（≥3cm・2–3cm×G2等）は原著appendix 2 p6＝手元PDF未収載につき入手後に精密化。境界域は非発火（過大評価回避）。
+//  ・APP_VER（出力フッタ版表示）を v2.1.24 に同期（旧v2.1.21据え置きを是正）。
+// ══ §0-4【v2.1.25】POTENT appendix 2 p6 照合＝N0精密ゲート＋予後パネルB-lite注記（IwaoK決裁 2026-07-20）══
+//  (1) potentN0Eligibility() 新設＝appendix原文の5基準を実装（径≥3cm／G3／脈管侵襲／G2かつ2–3cm／片方のみ+高増殖）。
+//      v2.1.24の近似ゲートは全24パターン中10件が原著と不一致だった（過剰1・過少9）＝是正。特に「T2×G2×低Ki-67は境界だから鳴らさない」
+//      という当方の判断は原著(iv)により明確に否定された＝一次資料が設計判断を上書きした事例として記録する。
+//  (2) 決裁A: 脈管侵襲の入力軸は新設せず、"LVIが答えを変える枝"（T1でG2単独 or 高Ki-67単独）にのみ条件付き文言。低リスクT1は沈黙。
+//  (3) 決裁B①: T2×G1×低Ki-67 は発火＋但し書き（径2–3cmでは適格外の可能性）。24パターン中この1件のみ意図的な過剰発火。
+//  (4) 決裁C: Ki-67閾値20%は当施設基準・POTENT非明示である旨を注記文に明示（出典偽装の回避）。
+//  (5) 決裁D: 術前薬物療法例はappendix 2)（術前化療前LN陽性 or 非pCR）で分岐。★アプリに純粋な術前内分泌の選択肢がないため 3) は実装不要。
+//  (6) 決裁E（B-lite）: 予後パネルでS-1行がN0で落ちた事実を注記行で明示（バー＝数値は作らない）。方向性欄との言及非対称を解消。
+//  ・型カウント不変（est 86／trial 51）＝注記のみでPFS_DATA行を追加していない。APP_VER/CACHE_NAME を v2.1.25 へ。
 // ── 5年PFSデータ ──────────────────────────────────────────────────────
 // 凡例: type="trial"→試験直接値, type="est"→推定値
 // 主要ソース:
-//   HR+/HER2-: ATAC, BIG1-98, monarchE(5y iDFS 83.6%/76.0%), POTENT(5y iDFS 87%/82%; 孫引き)
+//   HR+/HER2-: ATAC, BIG1-98, monarchE(5y iDFS 83.6%/76.0%), POTENT(5y iDFS 87%/82%; 原著Claude照合済 2026-07-20)
 //   HER2+: APT(5y iDFS 96.3%), APHINITY(6y iDFS 91%/88%; N+ 88%/83% HP/placebo), KATHERINE(7y iDFS 80.8%/67.1%)
 //   TNBC: KEYNOTE-522(5y EFS 81.3%/72.3%; pCR 92.2%/88.2%; non-pCR 62.6%/52.3%), CREATE-X(5y DFS 69.8%), OlympiA(IA2 Ann Oncol 2022 4y iDFS 82.7%/75.4%; ★指標=iDFS)
 const PFS_DATA = {
@@ -107,23 +130,25 @@ const PFS_DATA = {
       //   ＝方向性/スケジュール(isAbemaciclib)は出すのに治療別予後だけ片肺だった。非適応例（T2N0等）は既存カタログ機構が自動で適応外注記。
       //   ★値はest限定：83.6%(monarchE ITT・高Stage中心)のtrial流用は集団偽装＋型偽装。IIA固有5y iDFSは試験未報告。
       { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", source:"按分: monarchE iDFS HR 0.680 を IIA基線(手術＋化学療法＋ET 89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜monarchE ITTは高Stage中心でIIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（原著PDF未入手・按分推定＝est）｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:91, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜N+サブHR 0.70(0.52–0.93)｜OS HR 0.90(0.56–1.44)＝非有意・未成熟（iDFSは語れてもOS延長は語れない）｜★病期別絶対値は原著になく本行は按分＝est（本行=IIA按分91）｜N1以上で表示" },
       { label:"手術 ＋ タモキシフェン 5年", pfs:87, type:"est", source:"ATAC/BIG1-98対照群調整" },
     ],
     "IIB": [
       { label:"手術 ＋ 化学療法 ＋ ET 5年", pfs:83, type:"est", source:"EBCTCG / SEER統計調整" },
       { label:"手術 ＋ 化学療法 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET, HR 0.680）" },
       { label:"手術 ＋ ET単独（病期別按分）", pfs:80, type:"est", source:"按分: e_IIIA(1-0.76=0.24)÷monarchE N2/N1比1.176→IIB(N1相当)S≈80｜アンカー Rastogi monarchE JCO 2024 ITT対照(IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)/82%(ET単独)（原著PDF未入手・按分推定＝est）｜③型偽装是正: trial→est（原著未照合につき試験値ラベルを外す）｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ ET ＋ S-1（N1例）", pfs:87, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜N+サブHR 0.70(0.52–0.93)｜OS HR 0.90(0.56–1.44)＝非有意・未成熟（iDFSは語れてもOS延長は語れない）｜★病期別絶対値は原著になく本行は按分＝est（本行=IIB按分87・全体S-1アーム値に一致）｜type維持est（旧・原著未照合時のtrial→est是正は照合完了により解消）｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ（monarchE対象）", pfs:84, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 5y iDFS 83.6%(Stage IIIA相当)→84｜type:est" },
       { label:"化学療法 ＋ 手術 ＋ ET（monarchE対照）", pfs:76, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT対照(Stage IIIA相当)5y iDFS 76.0%｜type:est" },
-      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", req:{nPlus:true}, source:"Toi POTENT Lancet Oncol 2021 5y iDFS 87%基準(原著PDF未入手・按分推定)・N+高Stage按分｜type:est｜N1以上で表示" },
+      { label:"化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:81, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜N+サブHR 0.70(0.52–0.93)｜OS HR 0.90(0.56–1.44)＝非有意・未成熟（iDFSは語れてもOS延長は語れない）｜★病期別絶対値は原著になく本行は按分＝est（本行=IIIA按分81・全体87%からN+高Stage調整）｜N1以上で表示" },
     ],
     "IIIB": [
       { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:80, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIB按分80｜type:est" },
       { label:"術前化学療法 ＋ 手術 ＋ ET", pfs:71, type:"est", source:"按分: e_IIIA(0.24)×monarchE(IIIB/N2)比1.224→S≈71｜アンカー monarchE ITT対照76.0%｜type:est" },
+      // 【v2.1.24・実装3】閉経後IIIB S-1行を新設（適格stage I–IIIB内＝POTENT適格範囲・片肺是正）。IIICは適格外につき追加しない。
+      { label:"術前化学療法 ＋ 手術 ＋ ET ＋ S-1（N+）", pfs:80, type:"est", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：適格stage I–IIIB内・IIIBは適格範囲｜按分: 基線『術前化学療法+手術+ET』71%（イベント0.29）× N+サブHR 0.70(0.52–0.93)＝イベント0.203 → S≈80｜全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜OS HR 0.90(0.56–1.44)＝非有意・未成熟｜type:est（病期別絶対値は原著になし）｜単調性維持: IIIA S-1(81)→IIIB S-1(80)｜N1以上で表示｜v2.1.24新規" },
     ],
     "IIIC": [
       { label:"術前化学療法 ＋ 手術 ＋ ET ＋ アベマシクリブ", pfs:75, type:"est", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIC按分75｜type:est" },
@@ -262,23 +287,27 @@ const PFS_DATA_PREMENO = {
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（全体）", pfs:87.3, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 全体 5y DFS 87.3%（TAM+OFS）" },
       // 【v2.1.21】閉経前IIAのアベマ行欠落を是正（閉経後IIAと対称・片肺を作らない）。値・type根拠は閉経後IIA行に準拠。
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:92, type:"est", tp:"5年", source:"按分: monarchE iDFS HR 0.680 を 閉経前IIAの化学療法併用基線(化学療法＋OFS内分泌 ≈89%)に適用〔S≈0.89^0.68≈0.924〕→S≈92｜E+OFS全体91.1%基準では≈94だが、化学療法併用の高リスク基線＋過大評価回避で閉経後IIAと同じ辛め92に統一（IwaoK決裁 2026-07-18）｜閉経前ETはOFS基盤｜アンカー Rastogi monarchE JCO 2024 ITT 83.6/76.0%｜IIA固有5y iDFSは試験未報告のためest（trial流用＝集団偽装につき不可）｜腋窩1–3個＋Grade3/pT3+/Ki-67≥20%の高リスク例のみ適応（非適応例はカタログ機構が自動で適応外注記）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)参照（原著PDF未入手・按分推定＝est）｜閉経前ETはOFS基盤｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜N+サブHR 0.70(0.52–0.93)｜OS HR 0.90(0.56–1.44)＝非有意・未成熟｜閉経前ETはOFS基盤（POTENT閉経前=TAM±トレミフェン）・S-1は閉経状態を問わず上乗せ（閉経別サブHRは原著になし）｜★病期別絶対値は原著になく本行は按分＝est（本行=IIA按分87）｜N1以上で表示" },
     ],
     "IIB": [
       { label:"手術 ＋ エキセメスタン ＋ OFS 5年（N陽性）", pfs:85.6, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 85.6%（E+OFS）" },
       { label:"手術 ＋ タモキシフェン ＋ OFS 5年（N陽性）", pfs:81.4, type:"trial", tp:"5年", source:"Pagani, SOFT/TEXT, NEJM 2014 N陽性 5y DFS 81.4%（TAM+OFS）" },
       { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:83.6, type:"trial", tp:"5年", source:"Rastogi, monarchE, JCO 2024 ITT 5y iDFS 83.6%（アベマ+ET; 閉経前ETはOFS基盤）" },
-      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021 5y iDFS 87%(S-1)（原著PDF未入手・按分推定＝est）｜閉経前ETはOFS基盤｜N1以上で表示" },
+      { label:"手術 ＋ 化学療法 ＋ OFS内分泌 ＋ S-1（N1例）", pfs:87, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：全体5y iDFS 87%(S-1)/82%(内分泌単独)・iDFS HR 0.63(0.49–0.81)・P=0.0003・FAS 1930・MFU 52.2か月｜N+サブHR 0.70(0.52–0.93)｜OS HR 0.90(0.56–1.44)＝非有意・未成熟｜閉経前ETはOFS基盤・S-1は閉経状態を問わず上乗せ（閉経別サブHRは原著になし）｜★病期別絶対値は原著になく本行は按分＝est（本行=IIB按分87）｜N1以上で表示" },
     ],
     "IIIA": [
       { label:"手術 ＋ エキセメスタン ＋ OFS（病期別按分）", pfs:83, type:"est", tp:"5年", source:"按分: e_IIB(1-0.856=0.144)×monarchE N2/N1比1.176→S≈83｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)85.6%(E+OFS)、勾配 monarchE Nサブグループ相対比のみ｜type:est・指標混在(DFS基準×iDFS勾配)" },
       { label:"手術 ＋ タモキシフェン ＋ OFS（病期別按分）", pfs:78, type:"est", tp:"5年", source:"按分: e_IIB(1-0.814=0.186)×monarchE N2/N1比1.176→S≈78｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)81.4%(TAM+OFS)｜type:est" },
       { label:"化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:84, type:"est", tp:"5年", source:"アンカー Rastogi monarchE JCO 2024 ITT 5y iDFS 83.6%(Stage IIIA相当)→84｜閉経前ETはOFS基盤｜type:est" },
+      // 【v2.1.24・実装2】閉経前IIIA S-1行を新設＝片肺是正（閉経後IIIA S-1と対称化）。IwaoK発見の欠落枝（T2N2M0=IIIAで閉経前にすると本枝が消えていた）を補う。
+      { label:"化学療法 ＋ 手術 ＋ OFS内分泌 ＋ S-1（N+）", pfs:81, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：片肺是正（閉経後IIIA S-1と対称化）｜★推定根拠: POTENTは閉経状態別のS-1サブHRを報告せず（全体で上乗せ・§閉経前=TAM/AI+OFS基盤）＝S-1アームの病期別値は閉経で分けない → 本行は閉経後IIIA S-1(81)に一致させた按分81｜（別解: 閉経前IIIA E+OFS 83%基線×N+サブHR 0.70では S≈88 だが、閉経後IIIA(81)との整合・および premeno S-1族の単調性 IIA87/IIB87→IIIA を優先し81に統一。IwaoK委任『整合性のある推定値』に基づく判断）｜全体5y iDFS 87%(S-1)/82%(内分泌単独)・HR 0.63(0.49–0.81)・P=0.0003｜type:est｜N1以上で表示｜v2.1.24新規" },
     ],
     "IIIB": [
       { label:"手術 ＋ エキセメスタン ＋ OFS（病期別按分）", pfs:79, type:"est", tp:"5年", source:"按分: e_IIB(0.144)×monarchE比1.44(=√(N2/N1×N3/N1))→S≈79｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)85.6%(E+OFS)｜type:est" },
       { label:"手術 ＋ タモキシフェン ＋ OFS（病期別按分）", pfs:73, type:"est", tp:"5年", source:"按分: e_IIB(0.186)×monarchE比1.44→S≈73｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)81.4%(TAM+OFS)｜type:est" },
       { label:"術前化学療法 ＋ 手術 ＋ OFS内分泌 ＋ アベマシクリブ（monarchE対象）", pfs:80, type:"est", tp:"5年", source:"アンカー Rastogi monarchE JCO 2024 ITT 83.6%→IIIB按分80｜閉経前ETはOFS基盤｜type:est" },
+      // 【v2.1.24・実装3】閉経前IIIB S-1行を新設（適格stage I–IIIB内・閉経後IIIBと対称）。IIICは適格外につき追加しない。
+      { label:"術前化学療法 ＋ 手術 ＋ OFS内分泌 ＋ S-1（N+）", pfs:80, type:"est", tp:"5年", req:{nPlus:true}, source:"Toi, POTENT, Lancet Oncol 2021;22:74-84（原著Claude照合済 2026-07-20）：適格stage I–IIIB内｜★推定根拠: POTENTは閉経別S-1サブHRを報告せず → 閉経後IIIB S-1(80)に一致させた按分80（単調性 IIIA S-1 81→IIIB S-1 80 維持）｜（別解: 閉経前IIIB E+OFS 79%基線×N+サブHR 0.70では S≈85 だが閉経後IIIB(80)との整合を優先）｜全体5y iDFS 87%(S-1)/82%(内分泌単独)・HR 0.63(0.49–0.81)・P=0.0003｜type:est｜N1以上で表示｜v2.1.24新規" },
     ],
     "IIIC": [
       { label:"手術 ＋ エキセメスタン ＋ OFS（病期別按分）", pfs:75, type:"est", tp:"5年", source:"按分: e_IIB(0.144)×monarchE N3/N1比1.764→S≈75｜アンカー Pagani SOFT/TEXT NEJM 2014 IIB(N+)85.6%(E+OFS)｜type:est・N3高リスク" },
@@ -610,6 +639,38 @@ function isOncotypeDxEligible(subtype, n, grade, ki67) {
   const ki67v = Number(ki67);
   return n === "N1" || grade === "2" || grade === "3" || (Number.isFinite(ki67v) && ki67v >= 20);
 }
+// ── POTENT(Toi 2021) N0適格ゲート ─────────────────────────────────────
+// 出典: Toi, POTENT, Lancet Oncol 2021;22:74-84 ＋ 原著 appendix 2 p6（Claude現物照合 2026-07-20）。
+// appendix原文「Intermediate to high recurrence risk by prior treatment status」の N0適格（1: 術後化療 or 術前薬物療法なし）:
+//   (i) 浸潤径 ≥3cm ／ (ii) 組織学的Grade 3 ／ (iii) 明らかな脈管侵襲(evident vascular invasion)
+//   (iv) Grade 2 かつ 浸潤径 ≥2–<3cm ／ (v) {Grade 2, ≥2–<3cm} の片方のみ ＋ 高増殖マーカー(中央判定)
+//   2: 術前化学療法 → 術前化療"前"の細胞診/生検でLN陽性、または残存腫瘍あり（＝非pCR相当）
+//   3: 術前内分泌療法 → 1)基準を満たす、または術前内分泌"前"にLN陽性なら1)によらず適格
+//     ★アプリの初回治療方針は 手術／術前化学療法／術前化学内分泌療法 の3択＝純粋な術前内分泌がないため 3) は実装不要（2) に集約）。
+// ★アプリ側の制約と割り切り（IwaoK決裁 2026-07-20）:
+//   ・脈管侵襲(LVI)の入力軸を持たない → 軸は新設せず、LVIが"答えを変える枝"にだけ条件付き文言を出す（決裁A・下記kind:"lvi"）。
+//   ・TはT2が2–5cmを跨ぎ「≥3cm」を単独で切れない。ただし(i)+(iv)の合わせ技で T2はG2以上なら径によらず適格 → 残る曖昧は T2×G1×低Ki-67 のみ。
+//     そこは発火させたうえで但し書きを併記する（決裁B①：偽陽性のコストは"カンファレンスで検討"であり推奨ではないため許容）。
+//   ・高増殖マーカーの閾値は原著に数値記載がない（中央判定の"high"のみ）→ 当施設基準 Ki-67 ≥20% を用い、POTENT非明示である旨を注記（決裁C／出典偽装の回避）。
+//   ・T4は「常に適格」と簡略化（皮膚・胸壁浸潤＝臨床的高リスク）。原著の文字通りの基準は径・G・脈管ベースのため極小T4は厳密には非該当＝割り切り。
+// 返り値: {kind:"eligible"|"lvi"|"neoadj"|"none", caveat?:string}
+function potentN0Eligibility(t, grade, ki67, primaryTx) {
+  const ki67v = Number(ki67);
+  const hi = Number.isFinite(ki67v) && ki67v >= 20;      // 当施設基準（POTENT非明示）
+  if (primaryTx === "術前化学療法" || primaryTx === "術前化学内分泌療法") return { kind:"neoadj" };
+  if (t === "T3" || t === "T4") return { kind:"eligible" };          // (i) ＋T4割り切り
+  if (grade === "3") return { kind:"eligible" };                      // (ii)
+  if (t === "T2") {
+    if (grade === "2" || hi) return { kind:"eligible" };              // (iv)/(i)/(v)
+    return { kind:"eligible", caveat:"ただし浸潤径2–3cm・Grade1・Ki-67低値の場合は原著の適格基準を満たさない可能性があります（本アプリのT2は2–5cmを含み径を細分できないため）" };
+  }
+  if (t === "T1") {
+    if (grade === "2" && hi) return { kind:"eligible" };              // (v) G2単独＋高増殖
+    if (grade === "2" || hi) return { kind:"lvi" };                    // (iii)でのみ適格になりうる枝
+    return { kind:"none" };                                           // 低リスクT1は沈黙
+  }
+  return { kind:"none" };
+}
 // ── オラパリブ(OlympiA)術後補助適応判定 ──────────────────────────────
 // 出典: JOHBOC 遺伝性乳癌卵巣癌GL 2024 乳癌CQ8 / Tutt NEJM2021 / Geyer AnnOncol2022。
 // 大前提: gBRCA1/2病的バリアント陽性（アプリにBRCA入力軸なし→表示は常に「gBRCA+例」条件付き）。HER2陰性のみ。
@@ -861,7 +922,28 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     // else if (nPos && isN1to3(n)) {
     //   etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
     // }
-    if (nPos) etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
+    if (nPos) {
+      etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
+    }
+    // 【v2.1.25】N0のS-1注記を原著 appendix 2 p6 準拠の精密ゲートへ（v2.1.24の近似ゲートを是正）。
+    //   ★v2.1.24の近似ゲート(G3/T3/T4/Ki-67高)は全24パターン中10件が原著と不一致だった：
+    //     過剰発火＝T1・G1・Ki-67高（(v)はG2 or 2–3cmが前提でKi-67単独では拾わない）／
+    //     過少発火＝T2・G2・低Ki-67 ほか（(iv)で明確に適格なのに沈黙していた＝"境界だから鳴らさない"という当方の判断が原著により否定された）。
+    //   ★数値バー（est）は作らない方針は不変（②注記のみ折衷）。出すのは「適格範囲であること」と「判断はカンファレンスへ（IITL）」のみ。
+    else {
+      const pn0 = potentN0Eligibility(t, grade, ki67, primaryTx);
+      const S1 = "TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法";
+      const IITL = "副作用（下痢・骨髄抑制など）とのバランスも含め、主治医・患者さん・カンファレンスでの個別判断に委ねます";
+      const KI_NOTE = "※Ki-67の閾値20%は当施設基準であり、POTENT原著は「高増殖マーカー（中央判定）」とのみ記載し具体的数値を示していません";
+      if (pn0.kind === "eligible") {
+        etItems.push(`${S1}【要カンファレンス判断・IITL】：リンパ節転移がなくても（N0）、浸潤径3cm以上・Grade3・Grade2かつ2–3cm・脈管侵襲陽性、または高増殖能を伴う例はPOTENT試験の適格範囲（原著appendix 2 p6）に含まれます。${pn0.caveat ? pn0.caveat + "。" : ""}${IITL}。${KI_NOTE}`);
+      } else if (pn0.kind === "lvi") {
+        etItems.push(`${S1}【脈管侵襲陽性であれば適格・要カンファレンス判断・IITL】：本症例は径・グレード・増殖能だけではPOTENT適格基準を満たしませんが、原著appendix 2 p6は「明らかな脈管侵襲」を独立した適格基準としています。病理で脈管侵襲陽性であればS-1上乗せの適格範囲に入ります。${IITL}。${KI_NOTE}`);
+      } else if (pn0.kind === "neoadj") {
+        etItems.push(`${S1}【術前薬物療法例・要カンファレンス判断・IITL】：術前化学療法前の細胞診/生検でリンパ節転移陽性であった場合、または術後に残存腫瘍を認める場合（非pCR）はPOTENT試験の適格範囲（原著appendix 2 p6）に含まれます。${IITL}`);
+      }
+      // kind:"none"（低リスクT1＝G1かつKi-67低値）は何も出さない＝適格外を推奨で押さない。
+    }
     // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。HR+術後=腋窩4個以上／術前=non-pCR&CPS+EG≥3。アベマシクリブとは併用不可（択一）。
     const olaEligHR = olaparibEligibility(subtype, primaryTx, t, n);
     if (olaEligHR) etItems.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligHR.cond}の例（OlympiA試験）※ BRCA検査が必要${abema ? "／アベマシクリブとは併用不可・どちらか一方を選択" : ""}`);
@@ -1073,6 +1155,11 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade, k
 
   // N条件フィルタ: req.nPlus の行（S-1等）はN+のときのみ表示（N0/低リスクで非表示）
   const data = rawData.filter(item => !(item.req?.nPlus && !nPos));
+  // 【v2.1.25・B-lite】S-1行が「存在したがN0で落ちた」事実を検知。落ちたまま黙るのではなく注記で明示する（描画は下部）。
+  //   出す条件は治療カタログ側のN0ゲート（potentN0Eligibility）と同一＝方向性欄と予後欄の言及非対称を解消する。
+  //   ★低リスク（kind:"none"）では注記も出さない＝適格外の症例に不要な選択肢を想起させない。
+  const s1Dropped = subtype === "HR+/HER2-" && !nPos && rawData.some(it => it.req?.nPlus);
+  const s1HiddenNote = s1Dropped && potentN0Eligibility(t, grade, ki67, primaryTx).kind !== "none";
   // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)iDFS行を適応成立時に動的注入（判断B: 適応を厳密化）。
   //  TNBC術後=pT2+/pN1+、HR+術後=腋窩4個以上、術前=non-pCR前提。値はサブグループ別4年iDFS(Fig2B)。
   const olaElig = olaparibEligibility(subtype, primaryTx, t, n);
@@ -1249,6 +1336,18 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade, k
           <div style={{ display:"flex", flexDirection:"column", gap:11 }}>
             {mainRows.map((item, i) => renderBar(item, i, false))}
           </div>
+
+          {/* 【v2.1.25・B-lite】S-1がN0で非表示になった事実を"明示的な沈黙"として言語化する注記行。
+              バー（数値）は作らない＝②注記のみ折衷の思想を維持。カタログ思想（行を隠すな・誰の値かを言え）との整合を、
+              値ではなく言葉で回収する。アベマ=「適格集団の値がある薬」／S-1=「あなたには数値を出さない薬」の非対称を隠さない。 */}
+          {s1HiddenNote && (
+            <div style={{ marginTop:12, fontSize:11.5, lineHeight:1.7, color:"#5a4a2a",
+              background:"#fdf7e8", border:"1.5px dashed #d8b878", borderRadius:8, padding:"9px 11px" }}>
+              <b>※ TS-1（POTENT試験）について</b>：本症例はリンパ節転移陰性（N0）のため、<b>本パネルには数値を表示していません</b>
+              （病期別の絶対値は原著になく、N+の按分値をN0へ外挿しないため）。ただし中〜高リスクのN0はPOTENTの適格範囲に含まれます。
+              適格条件と考え方は「治療の方向性」欄をご参照のうえ、カンファレンスでの個別判断（IITL）に委ねます。
+            </div>
+          )}
 
           {/* 別枠タグ（②単剤トラスツズマブ等・主系列と分離した臨床オプション） */}
           {altRows.length > 0 && (
@@ -1488,7 +1587,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.21";
+  const APP_VER = "v2.1.25";  // 【v2.1.24】出力フッタ版表示をアプリ版に同期（旧v2.1.21で据え置かれていた／IwaoK指示 2026-07-20）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
