@@ -1,7 +1,7 @@
 {
   "name": "乳がん TNM分類・治療方針案",
   "short_name": "TNM-PFS",
-  "description": "AJCC 8th準拠のTNM分類と、5年PFSエビデンス（一次資料検証済み）を提示する治療方針案ツール（IwaoK™️）。世界医師会ポルト声明のPITL（医師参加型）に基づく補助ツール。",
+  "description": "AJCC 8th準拠のTNM分類と、5年PFSを中心とするエビデンス（PFSの5年値が原著に無い試験ではOS等・指標を明示／一次資料検証済み）を提示する治療方針案ツール（IwaoK™️）。世界医師会ポルト声明のPITL（医師参加型）に基づく補助ツール。",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
