@@ -978,14 +978,48 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     if (["T2","T3","T4"].includes(t)) {
       res.push({ cat:"術前化学療法（ネオアジュバント）の候補", items:["HR+/HER2-のT2以上では術前化学療法を選択することがあります","EC療法（エピルビシン＋シクロホスファミド）→ パクリタキセルが基本レジメン","※「初回治療方針」で「術前化学療法（HR+/HER2-）」を選択すると治療スケジュールが表示されます"]});
     }
-    // 【v2.0.8】Ki-67(増殖能)を治療判断に反映（従来はデッドパラメータだった）
-    if (ki67High) {
-      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67高値（${ki67v}%／当施設基準 ≥${KI67_HIGH}%）：Luminal B様。化学療法の上乗せを考慮`] });
-    } else if (ki67Low) {
-      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67低値（${ki67v}%／当施設基準 ≤${KI67_LOW}%）：Luminal A様。内分泌療法主体（化学療法省略を考慮）`] });
-    }
     if (isHighRisk || oncotype === "高リスク" || ki67High) {
       res.push({ cat:"化学療法（術後・高リスク例）", items:["AC→T（アンスラサイクリン→タキサン）、TC 等"] });
+    }
+    // 【v2.1.28】増殖能（Ki-67）ブロックの二重欠陥を是正（IwaoK発見・決裁 2026-07-23）。
+    //   ★欠陥1「沈黙」：KI67_LOW=10 / KI67_HIGH=20 の非対称により 11–19% はブロックごと
+    //     消滅していた（v2.0.8以来、低値側10は一度も決裁を経ていない取り残し）。
+    //     → 三帯化（低値／中間域／高値）。閾値20%は monarchE・POTENT・OncotypeDX と連動する
+    //       ため不変。中間域は IKWG 2021（Nielsen JNCI）の「中間域は単独で臨床判断に使えない」
+    //       に依拠し、沈黙ではなく明示する（沈黙は"静かに壊れる"型のため）。
+    //   ★欠陥2「単一軸断定」：Ki-67だけで完結した判定文が、直下の化学療法ブロック等と真逆の
+    //     推奨を並べていた（T3N0・Ki-67 10% で 3対1）。
+    //     → 病期ゲート(isHighRisk)では T1/G2・G3（POTENT lvi枝＋OncotypeDX同時発火）を
+    //       取りこぼすことが実測で判明（N0の372パターンで 矛盾121・沈黙108＝61.6%）。
+    //       よって病期ではなく res 自身を走査する自己整合ゲートへ変更＝将来ブロックが増えても
+    //       自動追随する（条件の手書き列挙は同じバグを再生産する）。
+    //   ★本ブロックは必ず res の最後尾に置くこと（上流ブロックの結論を参照するため）。
+    //     位置を戻すと escalating が常に false となり、欠陥2が静かに再発する。
+    //   ★ESCALATION_RX は薬剤名の文字列一致＝表記変更で静かに外れる。v2.1.29 で
+    //     res.push({cat, items, escalates:true}) のフラグ構造へ切り出す（申し送り記載）。
+    const ESCALATION_CAT = ["化学療法（術後・高リスク例）","術前化学療法（ネオアジュバント）の候補"];
+    const ESCALATION_RX  = /TS-1|アベマシクリブ|オラパリブ/;
+    const escalating = res.some(o => ESCALATION_CAT.includes(o.cat) || (o.items||[]).some(x => ESCALATION_RX.test(x)));
+    //   ★odxPending は現時点で【到達不能】＝カナリア枝として残置（IwaoK決裁 2026-07-23）。
+    //     理由：OncoDX適格条件（N1 or Grade2/3 or Ki-67≥20）と Ki-67低値が同時成立する場合、
+    //     N1→nPos で TS-1、Grade2/3×N0→POTENT(eligible/lvi)で TS-1 が必ず先に立つため
+    //     escalating が真になり、本枝に到達しない（全19,840パターンで発火0件）。
+    //     ゆえに「保険上ほぼ全例が未施行」という実情でも本文言が濫発する懸念は生じない。
+    //     逆に本枝が発火し始めたら escalating が壊れた合図＝audit の検知対象とする。
+    const odxPending = res.some(o => o.cat === "Oncotype DX（ゲノム検査）") && oncotype === "未施行";
+    const ki67Mid = Number.isFinite(ki67v) && !ki67High && !ki67Low;
+    const KI_BAND = `${ki67v}%／当施設基準：低値 ≤${KI67_LOW}%・中間 ${KI67_LOW+1}–${KI67_HIGH-1}%・高値 ≥${KI67_HIGH}%`;
+    if (ki67High) {
+      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67高値（${KI_BAND}）：Luminal B様。化学療法の上乗せを考慮`] });
+    } else if (ki67Mid) {
+      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67中間域（${KI_BAND}）：この範囲のKi-67は単独では治療選択の根拠になりません（IKWG 2021）。腫瘍径・Grade・リンパ節・Oncotype DX等と併せてご判断ください`] });
+    } else if (ki67Low) {
+      res.push({ cat:"増殖能（Ki-67）", items:[
+        escalating
+          ? `Ki-67低値（${KI_BAND}）：増殖能は低値ですが、本症例には他の再発リスク因子（腫瘍径・Grade・POTENT適格等）があり、上記に化学療法／薬剤上乗せの候補が提示されています。Ki-67低値のみを根拠に化学療法を省略することはできません。総合判断（IITL）に委ねます`
+          : odxPending
+          ? `Ki-67低値（${KI_BAND}）：Luminal A様。ただしOncotype DXが未施行のため、化学療法の省略可否はRS結果を待ってご判断ください（未施行のまま省略を判断する場合は、その旨をカンファレンス記録に残してください）`
+          : `Ki-67低値（${KI_BAND}）：Luminal A様。内分泌療法主体（化学療法省略を考慮）` ]});
     }
   }
 
@@ -1602,7 +1636,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.27";  // 【v2.1.27】CLEOPATRA 5年ランドマークOSを追記（Lancet Oncol 2020 一次PDF照合）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.28";  // 【v2.1.28】増殖能（Ki-67）ブロックを三帯化＋自己整合ゲート化（IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
