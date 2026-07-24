@@ -668,6 +668,19 @@ function isOncotypeDxEligible(subtype, n, grade, ki67) {
 //     そこは発火させたうえで但し書きを併記する（決裁B①：偽陽性のコストは"カンファレンスで検討"であり推奨ではないため許容）。
 //   ・高増殖マーカーの閾値は原著に数値記載がない（中央判定の"high"のみ）→ 当施設基準 Ki-67 ≥20% を用い、POTENT非明示である旨を注記（決裁C／出典偽装の回避）。
 //   ・T4は「常に適格」と簡略化（皮膚・胸壁浸潤＝臨床的高リスク）。原著の文字通りの基準は径・G・脈管ベースのため極小T4は厳密には非該当＝割り切り。
+// ══ §0-8【v2.1.30】POTENT適格病期ゲート＝IIIC除外（IwaoK決裁 2026-07-24）══
+//  ★発端：POTENT原著の適格病期は I–IIIB。この事実は v2.1.24 で PFS_DATA 側にのみ適用され
+//    （L84/L159/L318 のコメント「IIICは適格外につき追加しない」）、治療方針側
+//    （getTreatment の nPos 枝・buildSchedule の s1Add）には適用されていなかった＝層間の片肺。
+//    同じ一つの事実が2つの層に別々の書き方で置かれ、片方にしか効いていなかった（教訓7）。
+//  ★よって条件を各所へ書き足すのではなく、単一述語に集約して両層が同じものを参照する。
+//  ★病期は【解剖学的】anat を見る。getPrognostic の補正後（HR+/HER2-・G1/G2 では IIIC→IIIB）を
+//    見ると原著の適格集団と別物になる。getTreatment / buildSchedule はいずれも anat を受け取る。
+//  ★安全側の倒し方向（§1-4と同型・変更禁止）：未知の anat は true（＝S-1を記載する）へ倒す。
+//    false 側へ倒すと etEsc が落ち、Ki-67低値枝で「化学療法省略」の文言が出うる＝危険側。
+//    ゆえにホワイトリストではなくブラックリスト（!== "IIIC"）で書く。
+function isPotentStageEligible(anat) { return anat !== "IIIC"; }
+
 // 返り値: {kind:"eligible"|"lvi"|"neoadj"|"none", caveat?:string}
 function potentN0Eligibility(t, grade, ki67, primaryTx) {
   const ki67v = Number(ki67);
@@ -973,8 +986,23 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     //   etItems.push("アベマシクリブ（ベージニオ）：N1-3個では Grade3 または 腫瘍径≥5cm の場合に適応（monarchE基準を確認）");
     // }
     if (nPos) {
-      etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
-      etEsc = true;   // ★薬剤上乗せ＝エスカレーション
+      if (isPotentStageEligible(anat)) {
+        etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
+        etEsc = true;   // ★薬剤上乗せ＝エスカレーション
+      } else {
+        // 【v2.1.30・IwaoK決裁 2026-07-24】IIIC は POTENT 適格範囲外。
+        //   ★ただの削除にすると「誰も決めていない沈黙」と区別がつかない（教訓8）。
+        //     出さないと決めた事実と理由を画面に残す＝明示的な沈黙（カタログ思想）。
+        //   ★escalates は立てない（これは薬剤の上乗せではなく、非該当の告知である）。
+        //     escalating は本変更で不変（19,840パターン実測：真 19,360／素の「省略を考慮」264 とも
+        //     v2.1.29 と完全一致）。これを支える紐は【2本】ある＝独立（教訓12の逆・冗長で良い形）：
+        //       ① N3 は monarchE「リンパ節転移4個以上」に該当 → アベマシクリブが etEsc を立てる
+        //       ② IIIC は isHighRisk に含まれる → 化学療法ブロックが escalates:true で立つ
+        //     ★故障注入で確認済（2026-07-24）：isHighRisk から IIIC を外しても
+        //       素の「省略を考慮」は 264 のまま・IIIC で escalating=false は 0 件＝①が単独で支える。
+        //       逆に①②の両方を外す改修をするときは、必ずここを同時に見直すこと。
+        etItems.push("本症例は Stage IIIC で、POTENT試験の適格範囲（I–IIIB）外のため S-1 の記載を行いません");
+      }
     }
     // 【v2.1.25】N0のS-1注記を原著 appendix 2 p6 準拠の精密ゲートへ（v2.1.24の近似ゲートを是正）。
     //   ★v2.1.24の近似ゲート(G3/T3/T4/Ki-67高)は全24パターン中10件が原著と不一致だった：
@@ -1141,7 +1169,11 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     ? "\n高リスク：アベマシクリブ2年追加（monarchE基準）"
     : "";
   // 【v2.0.8】S-1をスケジュールにも配線（説明文getTreatmentとの非対称を解消）。HR+/HER2-・N1以上のみ。
-  const s1Add = (subtype === "HR+/HER2-" && isNPlus(n))
+  // 【v2.1.30】同じ POTENT 適格病期ゲートを適用（IIIC除外）。ここを外すと v2.0.8 で解消した
+  //   getTreatment との非対称が復活する。★理由の文言はここには置かない：
+  //   スケジュール表は「いつ何をするか」の層であり、非該当の理由は「治療の方向性」欄の
+  //   明示的沈黙注記に一本化する（＝決めた沈黙。IwaoK決裁 2026-07-24）。
+  const s1Add = (subtype === "HR+/HER2-" && isNPlus(n) && isPotentStageEligible(anat))
     ? "\n中〜高リスク（N1以上）：TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 追加を考慮（POTENT試験）"
     : "";
   // 【v2.1.3】オラパリブ(OlympiA/JOHBOC CQ8)をスケジュールにも配線。olaparibEligibilityで適応判定し各ホーム行に注記。
@@ -1699,7 +1731,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.29";  // 【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.30";  // 【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
