@@ -109,6 +109,18 @@ const STAGE_COLOR = {
 //      ★この非対称は片肺ではない。原著の制約であり、隠さず名乗る（沈黙を明示的な沈黙に変える＝カタログ思想）。
 //  (5) PFS_DATA（術後補助＝5年PFS）は無変更。OSはADV_EVIDENCE側にのみ存在する＝5年PFS表に指標混入なし。型カウント不変（est 86／trial 51）。
 //  (6) manifest.json の description を指標の実態に合わせて改訂（v32教訓「背骨はアプリの外の文章にも通す」の適用）。
+// ══ §0-9【v2.1.31】S-1／TS-1 の層別統一（IwaoK決裁 2026-07-24）══
+//  ★決裁：エビデンス・予後・試験の説明・治療の参考＝「S-1」／治療スケジュール＝「TS-1」。
+//    表記ゆれの統一ではなく【参照先の違い】である。試験・予後は文献の語、スケジュールは処方箋の語。
+//  ★v36 の旧【J】（案イ＝TS-1へ全面統一）は本決裁で上書き済。不採用の理由を残す（教訓6）：
+//    「S-1（テガフール・ギメラシル・オテラシルカリウム）」は処方箋にも薬袋にも存在しない組み合わせであり、
+//    全面統一すると患者が薬局で照合できる文字列が画面から消える。層別ならスケジュール欄に TS-1 が残る。
+//  ★改名は4箇所のみ（治療方針nPos枝／N0枝の共通ラベル S1／odxPending説明コメント／予後パネル注記）。
+//    buildSchedule の s1Add は【TS-1のまま】＝これが決裁の本体。触るな。
+//  ★据え置き（改名すると記録の改竄になる）：ESCALATION_RX の不採用記録／撤去した旧実装の記録／版ログ内の決裁記録。
+//    判定基準＝そのコメントが指しているのは「その日決めたこと」か「いま動いているコードか」。前者は残す。
+//  ★同居問題（治療方針にS-1・スケジュールにTS-1が同一画面に並ぶ）は【対応不要】と決裁。初出の「（ティーエスワン）」併記は行わない。
+//    ★不採用の記録：懸念は認識したうえで併記しないことを選んだ。外来で問い返しが実際に起きたら再考の入口とする。
 // ── 5年PFSデータ ──────────────────────────────────────────────────────
 // 凡例: type="trial"→試験直接値, type="est"→推定値
 // 主要ソース:
@@ -738,16 +750,77 @@ function olaparibEligibility(subtype, primaryTx, t, n) {
 //     ★実行時の倒し方向は必ず true 側（＝「省略できません」）にすること。
 //       失敗の向きが過剰な慎重さになる。false 側に倒すと化学療法省略の無言の許可になる。
 //
-//   ★スコープ（IwaoK決裁 2026-07-23）＝安全性に関与する5箇所のみ。
-//     局所療法／内分泌療法＋補助薬物療法／Oncotype DX／術前化学療法／化学療法（術後）。
-//     HER2+系・TNBC の push は subtype 排他かつゲートより後方＝到達不能、
-//     DCIS・M1 は res を使わず配列リテラルを return しているため、いずれも対象外。
-//     ★この「対象外」は一貫性の話であって安全性の話ではない。将来12箇所へ広げるとしても
-//       それは規約統一が動機であり、本版の撤退条件とは別である（申し送り記載）。
+//   ★スコープ【v2.1.32で拡大】＝res 経由の全10箇所。
+//     旧（v2.1.29決裁 2026-07-23）＝安全性に関与する5箇所のみ：局所療法／内分泌療法＋補助薬物療法／
+//     Oncotype DX／術前化学療法／化学療法（術後）。除外の根拠は「HER2+系・TNBC の push は
+//     subtype 排他かつ【ゲートより後方】＝到達不能」だった。
+//   ★v2.1.32 でこの根拠が失効した：finalize は関数末尾で res 全体を走査するため、
+//     もはや「ゲートより後方」は存在しない。旗の無いブロックは全 subtype で _escUnset を立てる。
+//     ＝旧決裁が予告していた「将来12箇所へ広げる」場面が来た（動機は規約統一ではなく、カナリアの生存）。
+//   ★DCIS・M1 は res を使わず配列リテラルを return する＝finalize を通らないため対象外のまま。
+//     これは【決めた沈黙】：保留ブロックを含まず escalating の消費者も居ない。旗のための旗は置かない。
 function pushBlock(res, b) {
-  if (!('escalates' in b)) { b.escalates = true; b._escUnset = true; }   // 安全側フォールバック
+  // ★pending（未解決ブロック）は escalates を持たないのが正しい状態＝フォールバックの対象外。
+  //   ここで true を立てると保留が自分自身をエスカレーションと数える（自己参照）。
+  if (!b.pending && !('escalates' in b)) { b.escalates = true; b._escUnset = true; }   // 安全側フォールバック
   res.push(b);
   return b;
+}
+
+// ══ §0-10【v2.1.32】finalize 方式＝位置依存の撤去（案C／K-b・IwaoK決裁 2026-07-24）══
+//  ★v2.1.28 以来、増殖能（Ki-67）ブロックは「res の最後尾に置くこと」という【散文の約束】で
+//    守られていた。約束を破っても壊れ方は静かで、機械検査（旧AU-4）だけが位置を見ていた。
+//    ＝教訓7の一般形「矛盾しえない書き方を探す」が、この一点だけ未適用で残っていた。
+//  ★案C：結論を保留したまま push し、関数末尾の finalize で res 全体を見て確定する。
+//    位置依存が【仕様から降りる】。isPotentStageEligible を単一述語にしたのと同じ思想の続き。
+//  ★設計上の4つの決め（変更禁止・理由付き）：
+//    ① finalize は items のテキストを読まない。解決に要る材料は保留ブロック自身が運ぶ
+//       （level／band／odxUnknown）。res の文字列を読み直した瞬間、v2.1.29 で撤去した
+//       ESCALATION_RX（薬剤名の文字列一致）が別の顔で戻ってくる。
+//    ② escalating は保留ブロックを除いて数える（!o.pending）。自己参照の禁止。
+//    ③ 解決後の増殖能ブロックには escalates:false を【明記】する。v2.1.31 まではフィールドごと
+//       不在だった＝「誰も決めていない沈黙」。決めた false に変える（教訓8）。
+//    ④ 未解決の pending が残ったら _pendingUnresolved を立てる＝旧AU-4（位置検査）の役目替え。
+//       位置を見る意味は消えたが、見張りの数は減らさない。
+//  ★残渣（正直に記録）：低値・escalating 枝の文言は「上記に…提示されています」と書く。
+//    論理の位置依存は死んだが、【文言の位置依存】は残る。物理配置を末尾から動かすなら文言も直すこと。
+function finalize(res) {
+  // ① 未フラグ検査（本命の網）。pushBlock を使わず生の res.push を書いた場合もここで捕まる。
+  //    捕まえたら安全側（true）へ倒し、_escUnset を立てて audit(AU-6) に渡す。
+  res.forEach(o => { if (!o.pending && !('escalates' in o)) { o.escalates = true; o._escUnset = true; } });
+  // ② エスカレーション判定（保留は自己参照になるため除外＝決め②）
+  const escalating = res.some(o => !o.pending && o.escalates === true);
+  // ③ 保留の解決
+  res.forEach(o => { if (o.pending === "ki67") resolveKi67(o, res, escalating); });
+  // ④ 未解決残留検査＝AU-4'（決め④）。解決器を書き忘れた保留はここで音を立てる。
+  res.forEach(o => { if (o.pending) o._pendingUnresolved = true; });
+  return res;
+}
+
+// 増殖能（Ki-67）ブロックの解決器。o は {cat, pending:"ki67", level, band, odxUnknown}。
+function resolveKi67(o, res, escalating) {
+  const B = o.band;
+  //   ★odxPending は現時点で【到達不能】＝カナリア枝として残置（IwaoK決裁 2026-07-23）。
+  //     理由：OncoDX適格条件（N1 or Grade2/3 or Ki-67≥20）と Ki-67低値が同時成立する場合、
+  //     N1→nPos で S-1、Grade2/3×N0→POTENT(eligible/lvi)で S-1 が必ず先に立つため
+  //     escalating が真になり、本枝に到達しない（全19,840パターンで発火0件）。
+  //     ゆえに「保険上ほぼ全例が未施行」という実情でも本文言が濫発する懸念は生じない。
+  //     逆に本枝が発火し始めたら escalating が壊れた合図＝audit の検知対象とする（AU-5）。
+  //   ★odxUnknown は保留ブロックが運んできた構造値。items の文字列からは決して読まない（決め①）。
+  const odxPending = o.odxUnknown === true && res.some(x => x.cat === "Oncotype DX（ゲノム検査）");
+  o.items = [
+    o.level === "high"
+      ? `Ki-67高値（${B}）：Luminal B様。化学療法の上乗せを考慮`
+    : o.level === "mid"
+      ? `Ki-67中間域（${B}）：この範囲のKi-67は単独では治療選択の根拠になりません（IKWG 2021）。腫瘍径・Grade・リンパ節・Oncotype DX等と併せてご判断ください`
+    : escalating
+      ? `Ki-67低値（${B}）：増殖能は低値ですが、本症例には他の再発リスク因子（腫瘍径・Grade・POTENT適格等）があり、上記に化学療法／薬剤上乗せの候補が提示されています。Ki-67低値のみを根拠に化学療法を省略することはできません。総合判断（IITL）に委ねます`
+    : odxPending
+      ? `Ki-67低値（${B}）：Luminal A様。ただしOncotype DXが未施行のため、化学療法の省略可否はRS結果を待ってご判断ください（未施行のまま省略を判断する場合は、その旨をカンファレンス記録に残してください）`
+      : `Ki-67低値（${B}）：Luminal A様。内分泌療法主体（化学療法省略を考慮）`
+  ];
+  o.escalates = false;   // ★決め③：増殖能の記述は上乗せの提示ではない＝【決めた false】
+  delete o.pending; delete o.level; delete o.band; delete o.odxUnknown;
 }
 
 function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, oncotype, primaryTx, lymphNode) {
@@ -987,7 +1060,7 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     // }
     if (nPos) {
       if (isPotentStageEligible(anat)) {
-        etItems.push("TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
+        etItems.push("S-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法：N1以上・中〜高リスク例（POTENT試験）");
         etEsc = true;   // ★薬剤上乗せ＝エスカレーション
       } else {
         // 【v2.1.30・IwaoK決裁 2026-07-24】IIIC は POTENT 適格範囲外。
@@ -1011,7 +1084,7 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     //   ★数値バー（est）は作らない方針は不変（②注記のみ折衷）。出すのは「適格範囲であること」と「判断はカンファレンスへ（IITL）」のみ。
     else {
       const pn0 = potentN0Eligibility(t, grade, ki67, primaryTx);
-      const S1 = "TS-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法";
+      const S1 = "S-1（テガフール・ギメラシル・オテラシルカリウム）1年 ＋ 内分泌療法";
       const IITL = "副作用（下痢・骨髄抑制など）とのバランスも含め、主治医・患者さん・カンファレンスでの個別判断に委ねます";
       const KI_NOTE = "※Ki-67の閾値20%は当施設基準であり、POTENT原著は「高増殖マーカー（中央判定）」とのみ記載し具体的数値を示していません";
       if (pn0.kind === "eligible") {
@@ -1072,8 +1145,10 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     //       取りこぼすことが実測で判明（N0の372パターンで 矛盾121・沈黙108＝61.6%）。
     //       よって病期ではなく res 自身を走査する自己整合ゲートへ変更＝将来ブロックが増えても
     //       自動追随する（条件の手書き列挙は同じバグを再生産する）。
-    //   ★本ブロックは必ず res の最後尾に置くこと（上流ブロックの結論を参照するため）。
-    //     位置を戻すと escalating が常に false となり、欠陥2が静かに再発する。
+    //   ★【v2.1.28〜v2.1.31の制約・記録】本ブロックは必ず res の最後尾に置くこと、という
+    //     散文の約束で守られていた（位置を戻すと escalating が常に false ＝欠陥2が静かに再発）。
+    //     ★v2.1.32 でこの制約は【撤去】。結論を保留して push し finalize が res 全体を見て確定する。
+    //       物理的には今も末尾に置いているが、それは文言「上記に…」のためであって論理の要請ではない。
     //   ★【v2.1.29】ESCALATION_CAT / ESCALATION_RX は撤去した（IwaoK決裁 2026-07-23）。
     //     旧実装（記録として残す）：
     //       const ESCALATION_CAT = ["化学療法（術後・高リスク例）","術前化学療法（ネオアジュバント）の候補"];
@@ -1083,49 +1158,41 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     //     ★不採用の理由を残す：表記変更（TS-1→S-1／アベマシクリブ→ベージニオ）で静かに外れる。
     //       この紐が弱いことは v34 の時点で分かっていた。分かっているうちに結び直した。
     //
-    //   ★本命の網＝未フラグ検査。pushBlock を使わず生の res.push で新ブロックを書いた場合も
-    //     ここで捕まる。捕まえたら安全側（true）へ倒し、_escUnset を立てて audit(A-6) に渡す。
-    //     ★この検査は escalating の計算「直前」に置くこと。この時点の res には
-    //       局所療法／内分泌／OncoDX／術前化療／化学療法 の5種しか入らない（＝決裁スコープと一致）。
-    //       増殖能ブロック自身は後から push されるため対象外になる＝カナリアがノイズで埋もれない。
-    const unflagged = res.filter(o => !('escalates' in o));
-    unflagged.forEach(o => { o.escalates = true; o._escUnset = true; });
-    const escalating = res.some(o => o.escalates === true);
-    //   ★odxPending は現時点で【到達不能】＝カナリア枝として残置（IwaoK決裁 2026-07-23）。
-    //     理由：OncoDX適格条件（N1 or Grade2/3 or Ki-67≥20）と Ki-67低値が同時成立する場合、
-    //     N1→nPos で TS-1、Grade2/3×N0→POTENT(eligible/lvi)で TS-1 が必ず先に立つため
-    //     escalating が真になり、本枝に到達しない（全19,840パターンで発火0件）。
-    //     ゆえに「保険上ほぼ全例が未施行」という実情でも本文言が濫発する懸念は生じない。
-    //     逆に本枝が発火し始めたら escalating が壊れた合図＝audit の検知対象とする。
-    const odxPending = res.some(o => o.cat === "Oncotype DX（ゲノム検査）") && oncotype === "未施行";
+    //   ★【v2.1.32】未フラグ検査（_escUnset）・escalating の計算・odxPending の判定は
+    //     すべて finalize / resolveKi67 へ移設した（§0-10）。ここには残っていない。
+    //     旧実装は「escalating の計算【直前】に置くこと」という位置の約束で
+    //     カナリアのスコープ（5種）を作っていた。v2.1.32 ではスコープを pending 属性で作る。
     const ki67Mid = Number.isFinite(ki67v) && !ki67High && !ki67Low;
     const KI_BAND = `${ki67v}%／当施設基準：低値 ≤${KI67_LOW}%・中間 ${KI67_LOW+1}–${KI67_HIGH-1}%・高値 ≥${KI67_HIGH}%`;
-    if (ki67High) {
-      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67高値（${KI_BAND}）：Luminal B様。化学療法の上乗せを考慮`] });
-    } else if (ki67Mid) {
-      res.push({ cat:"増殖能（Ki-67）", items:[`Ki-67中間域（${KI_BAND}）：この範囲のKi-67は単独では治療選択の根拠になりません（IKWG 2021）。腫瘍径・Grade・リンパ節・Oncotype DX等と併せてご判断ください`] });
-    } else if (ki67Low) {
-      res.push({ cat:"増殖能（Ki-67）", items:[
-        escalating
-          ? `Ki-67低値（${KI_BAND}）：増殖能は低値ですが、本症例には他の再発リスク因子（腫瘍径・Grade・POTENT適格等）があり、上記に化学療法／薬剤上乗せの候補が提示されています。Ki-67低値のみを根拠に化学療法を省略することはできません。総合判断（IITL）に委ねます`
-          : odxPending
-          ? `Ki-67低値（${KI_BAND}）：Luminal A様。ただしOncotype DXが未施行のため、化学療法の省略可否はRS結果を待ってご判断ください（未施行のまま省略を判断する場合は、その旨をカンファレンス記録に残してください）`
-          : `Ki-67低値（${KI_BAND}）：Luminal A様。内分泌療法主体（化学療法省略を考慮）` ]});
+    //   ★v2.1.32：結論を出さずに【保留したまま】push する。文言は finalize が確定する。
+    //     level / band / odxUnknown は解決に必要な材料＝ブロック自身が運ぶ（§0-10 決め①）。
+    const ki67Level = ki67High ? "high" : ki67Mid ? "mid" : ki67Low ? "low" : null;
+    if (ki67Level) {
+      pushBlock(res, { cat:"増殖能（Ki-67）", pending:"ki67", level:ki67Level,
+                       band:KI_BAND, odxUnknown: oncotype === "未施行" });
     }
   }
 
+  // 【v2.1.32】以下4ブロックを生 res.push → pushBlock へ（escalates の付与＝IwaoK決裁 2026-07-24）。
+  //   ★付与規則：化学療法または薬剤上乗せを含む行＝true／局所療法・内分泌療法単独＝false。
+  //     既存5ブロックの割り当て（局所療法 false／内分泌＋補助薬物 etEsc／OncoDX 高リスクのみ true／
+  //     術前化療 true／化学療法 true）と同じ規則である。
+  //   ★これらの値は【現時点では挙動に一切影響しない】。escalating の唯一の消費者は
+  //     増殖能（Ki-67）低値枝であり、それは HR+/HER2− にしか存在しない＝subtype 排他。
+  //     よって等価性検証はどの値でも通る＝純粋な意味論の判断（【L】と同じ性質）。
+  //     だからこそ安全側の規則で決めた：迷ったら true（false へ倒すのが危険側・§0-8と同型）。
   if (subtype === "HER2+" || subtype === "HR+/HER2+") {
     if (isHighRisk)
-      res.push({ cat:"薬物療法（術前推奨）", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）","術前でpCR未達の場合 → 術後 T-DM1（カドサイラ）に変更（KATHERINE 試験）"] });
+      pushBlock(res, { cat:"薬物療法（術前推奨）", escalates:true, items:["化学療法 ＋ トラスツズマブ（ハーセプチン）＋ ペルツズマブ（パージェタ）","術前でpCR未達の場合 → 術後 T-DM1（カドサイラ）に変更（KATHERINE 試験）"] });
     else
-      res.push({ cat:"薬物療法", items:["化学療法 ＋ トラスツズマブ（ハーセプチン）1年間","低リスク例（T1N0 等）：パクリタキセル ＋ トラスツズマブ も選択肢"] });
+      pushBlock(res, { cat:"薬物療法", escalates:true, items:["化学療法 ＋ トラスツズマブ（ハーセプチン）1年間","低リスク例（T1N0 等）：パクリタキセル ＋ トラスツズマブ も選択肢"] });
     if (subtype === "HR+/HER2+") {
       const etDetail = postMeno
         ? "アロマターゼ阻害薬（レトロゾール、アナストロゾール、エキセメスタン）5〜10年"
         : preMeno
         ? "タモキシフェン 5〜10年（閉経前標準）／高リスク例：卵巣機能抑制（LH-RHアゴニスト）＋タモキシフェン または AI（SOFT/TEXT）"
         : "タモキシフェン または アロマターゼ阻害薬（閉経状況により選択）";
-      res.push({ cat:"内分泌療法（ER/PR陽性例に追加）", items:[etDetail, "※抗HER2療法（トラスツズマブ ± ペルツズマブ／T-DM1）と並行して実施します"] });
+      pushBlock(res, { cat:"内分泌療法（ER/PR陽性例に追加）", escalates:false, items:[etDetail, "※抗HER2療法（トラスツズマブ ± ペルツズマブ／T-DM1）と並行して実施します"] });
     }
   }
 
@@ -1134,10 +1201,10 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。TNBC術後=pT2以上orpN1以上／術前=non-pCR。カペシタビンとは併用不可（択一）。
     const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n);
     if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
-    res.push({ cat:"化学療法 ＋ 免疫療法", items });
+    pushBlock(res, { cat:"化学療法 ＋ 免疫療法", escalates:true, items });
   }
 
-  return res;
+  return finalize(res);
 }
 
 // ── Treatment Schedule ────────────────────────────────────────────────
@@ -1487,7 +1554,7 @@ function PfsPanel({ anat, subtype, menopause, primaryTx, surgery, n, t, grade, k
           {s1HiddenNote && (
             <div style={{ marginTop:12, fontSize:11.5, lineHeight:1.7, color:"#5a4a2a",
               background:"#fdf7e8", border:"1.5px dashed #d8b878", borderRadius:8, padding:"9px 11px" }}>
-              <b>※ TS-1（POTENT試験）について</b>：本症例はリンパ節転移陰性（N0）のため、<b>本パネルには数値を表示していません</b>
+              <b>※ S-1（POTENT試験）について</b>：本症例はリンパ節転移陰性（N0）のため、<b>本パネルには数値を表示していません</b>
               （病期別の絶対値は原著になく、N+の按分値をN0へ外挿しないため）。ただし中〜高リスクのN0はPOTENTの適格範囲に含まれます。
               適格条件と考え方は「治療の方向性」欄をご参照のうえ、カンファレンスでの個別判断（IITL）に委ねます。
             </div>
@@ -1731,7 +1798,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.30";  // 【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.32";  // 【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
