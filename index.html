@@ -1170,6 +1170,13 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
     if (ki67Level) {
       pushBlock(res, { cat:"増殖能（Ki-67）", pending:"ki67", level:ki67Level,
                        band:KI_BAND, odxUnknown: oncotype === "未施行" });
+    } else {
+      // 【v2.1.35】Ki-67 未施行（初期値 undefined／Number→NaN）＝増殖能は判定できないが沈黙させない（教訓8）。
+      //   この else は subtype==="HR+/HER2-" かつ非M1（増殖能枝が立つ文脈）でのみ到達。
+      //   Ki-67値で動く治療は実測3ブロック（化学療法上乗せ960/内分泌+補助232/OncoDX128）。詳細は名指しせず「変わりうる」だけ告げる。
+      pushBlock(res, { cat:"増殖能（Ki-67）",
+                       items:["Ki-67の数値入力によっては治療法のオプションが変わります"],
+                       escalates:false, color:"#fff8e1", border:"1px solid #f0d890" });
     }
   }
 
@@ -1654,16 +1661,18 @@ function PlusMinus({ label, value, onChange }) {
 const arrowBtn = { width:24, height:24, borderRadius:5, border:"1.5px solid #d4dae4", background:"#fff", fontSize:10, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", padding:0, color:"#555" };
 
 function Ki67Slider({ value, onChange }) {
+  const undef = value === undefined || value === null || Number.isNaN(Number(value));
   return (
     <div style={{ display:"flex", alignItems:"center", gap:6 }}>
       <span style={{ fontSize:11, fontWeight:700, color:"#888", minWidth:42 }}>Ki-67</span>
-      <button onClick={()=>onChange(Math.max(0,value-1))} style={arrowBtn}>◀</button>
+      <button onClick={()=>onChange(undef?20:Math.max(0,value-1))} style={arrowBtn}>◀</button>
       <div style={{ position:"relative", flex:1 }}>
-        <input type="range" min={0} max={100} value={value} onChange={e=>onChange(Number(e.target.value))} style={{ width:"100%", accentColor:"#1a5fa8", cursor:"pointer" }} />
+        <input type="range" min={0} max={100} value={undef?20:value} onChange={e=>onChange(Number(e.target.value))} style={{ width:"100%", accentColor:"#1a5fa8", cursor:"pointer", opacity:undef?0.4:1 }} />
         <div style={{ position:"absolute", top:-4, left:"20%", transform:"translateX(-50%)", width:2, height:8, background:"#e07030", borderRadius:1 }} />
       </div>
-      <button onClick={()=>onChange(Math.min(100,value+1))} style={arrowBtn}>▶</button>
-      <span style={{ fontSize:13, fontWeight:700, minWidth:40, textAlign:"right", color:value>=20?"#b03000":"#333" }}>{value}%</span>
+      <button onClick={()=>onChange(undef?20:Math.min(100,value+1))} style={arrowBtn}>▶</button>
+      <span style={{ fontSize:13, fontWeight:700, minWidth:56, textAlign:"right", color:undef?"#e07030":(value>=20?"#b03000":"#333") }}>{undef?"未施行":value+"%"}</span>
+      <button onClick={()=>onChange(undefined)} style={{ ...arrowBtn, fontSize:10, minWidth:36, color:"#888" }}>クリア</button>
     </div>
   );
 }
@@ -1736,7 +1745,7 @@ function App() {
   const [pr, setPr] = useState(null);
   const [her2, setHer2] = useState(null);
   const [grade, setGrade] = useState(null);
-  const [ki67, setKi67] = useState(20);
+  const [ki67, setKi67] = useState(undefined);   // 【v2.1.35】初期値=未施行（Number(undefined)=NaN で低値誤判定を回避）。null/空/0 は不可
   const [oncotype, setOncotype] = useState(null);
 
   function tFromSize(mm) {
@@ -1785,7 +1794,7 @@ function App() {
     setPrimaryTx(null); setLymphNode(null);
     setSelT(null); setSelT4sub(null); setSelN(null); setSelM(null);
     setTumorSize(null); setLymphCount(null);
-    setEr(null); setPr(null); setHer2(null); setGrade(null); setKi67(20);
+    setEr(null); setPr(null); setHer2(null); setGrade(null); setKi67(undefined);
     setOncotype(null);
   }
 
@@ -1803,7 +1812,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.34";  // 【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.35";  // 【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
@@ -2182,7 +2191,7 @@ function App() {
                 <Divider title="治療の方向性（参考）" />
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   {(isM1 ? treatment.concat([{ cat:"", items:[M1_LINE_DISCLAIMER] }]) : treatment).map((sec,i)=>(
-                    <div key={i} style={{ background:"#f8faff", borderRadius:8, padding:"10px 12px", border:"1px solid #e8eef8" }}>
+                    <div key={i} style={{ background:sec.color||"#f8faff", borderRadius:8, padding:"10px 12px", border:sec.border||"1px solid #e8eef8" }}>
                       {sec.cat && <div style={{ fontSize:11, fontWeight:700, color:"#334", marginBottom:6 }}>{sec.cat}</div>}
                       <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
                         {sec.items.map((item,j)=>(
