@@ -1225,7 +1225,12 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   //  という層間矛盾（getTreatmentは anat==="IV" で緩和的1次治療を返す）が起きていた。
   //  isPalliative を新設し、if連鎖の最上流（DCISの次）で判定する。M0の非手術（高齢・寝たきり・皮膚浸潤等）も同枝でOK（IwaoK判断）。
   const isAdv        = anat === "IV";
-  const isPalliative = isAdv || surgery === "非手術（薬物療法）";
+  // 【v2.1.33】第2項 surgery === "非手術（薬物療法）" を撤去（IwaoK決裁 2026-07-24）。
+  //   ★M0の選択肢から「非手術（薬物療法）」を削除したため、この項は M0 では永久に偽になった。
+  //     M1は isAdv で守られる（L~1775 で isM1 は非手術に強制設定されるが、isAdv が真なので第2項に依存しない）。
+  //   ★不採用の記録：第2項を「残して死なせる」案も検討したが、選択肢から消えた値を条件に残すと
+  //     教訓14（定義から切り離された記号＝中身のない在庫）になる。ここは実体を消す。取り下げの理由は上流UI注記に残す。
+  const isPalliative = isAdv;
   // 内分泌療法の中身（閉経状態で分岐しOFSを整合。閉経前にAI単独を出さない＝層①getTreatmentと一致）
   const etAdjContent =
     postMeno ? "アロマターゼ阻害薬（レトロゾール等）5〜10年"
@@ -1798,7 +1803,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.32";  // 【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.33";  // 【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
@@ -2115,16 +2120,17 @@ function App() {
                 <RowLabel>乳房手術術式</RowLabel>
                 {/* 【v2.1.4】M1: 従来は「非手術」固定表示だったが、遠隔転移例でも局所制御・症状緩和目的の手術はありうる（IwaoK）。
                     選択可能にしつつ、スケジュールは buildSchedule の isPalliative で常に緩和的1次治療枝に固定される。
-                    M0: 高齢・寝たきり・皮膚浸潤等で非切除とする例があるため「非手術（薬物療法）」を追加（IwaoK）。 */}
-                <SegBtn options={isM1 ? ["非手術（薬物療法）","温存","全摘"] : ["温存","全摘","非手術（薬物療法）","未決定"]} value={surgery} onChange={setSurgery} />
+                    【v2.1.33・M0非手術の取り下げ・IwaoK決裁 2026-07-24】M0の「非手術（薬物療法）」は【削除】した。
+                    ★v2.1.4 で「高齢・寝たきり・皮膚浸潤等で非切除とする例がある」ため追加した判断を【取り下げる】（採用の記録と同じ重さで残す＝教訓6）。
+                      取り下げの理由：M0非手術は isPalliative の第2項＝M1用の緩和枝を借りていた。その結果、非転移のM0浸潤癌に
+                      2次治療・3次治療・耐性後（エンハーツ等）という【転移乳癌のライン戦略】が出ていた（実機発見・IwaoK 2026-07-24）。
+                      ＝POTENT×IIIC（教訓16）より危険側の「別の病気の治療を出す」型。DCISでは非手術と未決定の出力が既に同一だった。
+                    ★M0非切除例そのものが臨床に存在しないという主張ではない。専用枝（案②）を作らず「未決定」に集約すると決めた
+                      ＝その患者が来たときに医師が個別に考える（PITL/IITL）。按分カタログを増やさない選択（わがまま😌・不採用の記録）。 */}
+                <SegBtn options={isM1 ? ["非手術（薬物療法）","温存","全摘"] : ["温存","全摘","未決定"]} value={surgery} onChange={setSurgery} />
                 {isM1 && surgery && surgery !== "非手術（薬物療法）" && (
                   <div style={{ marginTop:6, padding:"7px 10px", background:"#fff4e5", border:"1px solid #f0c891", borderRadius:6, fontSize:12, color:"#7a4a00", lineHeight:1.6 }}>
                     遠隔転移がある場合の手術は、局所の症状をやわらげる・局所を抑える目的で行います。再発予防のための「術後の追加治療」は行わず、全身の薬物療法（緩和的1次治療）が治療の中心になります。
-                  </div>
-                )}
-                {!isM1 && surgery === "非手術（薬物療法）" && (
-                  <div style={{ marginTop:6, padding:"7px 10px", background:"#f0f8f0", border:"1px solid #b8d8b8", borderRadius:6, fontSize:12, color:"#2a5a2a", lineHeight:1.6 }}>
-                    手術を行わない場合は、薬物療法と症状緩和ケア（痛み・皮膚の症状など）が治療の中心になります。
                   </div>
                 )}
               </div>
