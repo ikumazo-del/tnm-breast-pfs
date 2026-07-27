@@ -252,34 +252,36 @@ const PFS_DATA = {
   "TNBC": {
     "IA": [
       { label:"手術 ＋ 化学療法（EC→T）", pfs:89, type:"est", source:"SEER統計 Stage I TNBC参照" },
-      { label:"術前化学療法＋ペムブロリズマブ→pCR→継続（KEYNOTE-522推定）", pfs:92, type:"est", source:"KEYNOTE-522 pCR群 92.2%（Stage II-IIIデータ）参照" },
+      // 【v2.1.38・IwaoK決裁 2026-07-27】KEYNOTE-522 は Stage II–III の試験＝Stage I（IA）は適格外。
+      //   旧行（術前ペムブロ→pCR 92% を Stage II-III から按分・type:est）を削除し【不在】で表現（POTENT の予後層と同型）。
+      //   ★理由を残す（教訓8：誰も決めていない沈黙と区別するため）。治療層の明示的沈黙注記は getTreatment 側に一本化。
     ],
     "IIA": [
-      { label:"術前化学療法＋ペムブロリズマブ→手術→継続（KEYNOTE-522全体）", pfs:83, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III全体）" },
-      { label:"術前化学療法のみ（KEYNOTE-522 対照群）", pfs:74, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%（Stage II-III）" },
-      { label:"術前化学療法→pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 92.2%（ペムブロ）" },
-      { label:"術前化学療法のみ→pCR達成", pfs:88, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 88.2%（プラセボ）" },
+      { label:"術前化学療法＋ペムブロリズマブ→手術→継続（KEYNOTE-522全体）", pfs:83, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III全体）★未照合：81.3%は後年5年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照群）", pfs:74, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%（Stage II-III）★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
+      { label:"術前化学療法→pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 92.2%（ペムブロ）｜【E】pCR例EFS HR 0.73（95%CI 0.39–1.36）＝Schmid NEJM 2022原著（事前規定・非無作為化・探索的・pCR〔ベースライン後変数〕で層別／CIが1をまたぎ効果確定不可＝数値バー化しない文字注記）｜表示%は★未照合（後年解析由来・別チャット照合予定）" },
+      { label:"術前化学療法のみ→pCR達成", pfs:88, type:"trial", source:"KEYNOTE-522 pCR群 5y EFS 88.2%（プラセボ）｜【E】pCR例EFS HR 0.73（Schmid NEJM 2022・探索的）＝上のペムブロ行参照｜表示%は★未照合（後年解析由来・別チャット照合予定）" },
       { label:"術前化学療法→non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%（non-pCR TNBC）" },
       { label:"術前化学療法→non-pCR→無追加（CREATE-X 対照）", pfs:56, type:"trial", source:"CREATE-X 観察群 5y DFS 56.1%" },
-      { label:"術前化学療法＋ペムブロリズマブ→non-pCR→cape＋継続", pfs:63, type:"trial", source:"KEYNOTE-522 non-pCR群 5y EFS 62.6%（ペムブロ）" },
+      { label:"術前化学療法＋ペムブロリズマブ→non-pCR→cape＋継続", pfs:63, type:"trial", source:"KEYNOTE-522 non-pCR群 5y EFS 62.6%（ペムブロ）｜【E】non-pCR例EFS HR 0.70（95%CI 0.52–0.95）＝Schmid NEJM 2022原著（事前規定・非無作為化・探索的・pCR層別／数値バー化しない文字注記）｜表示%は★未照合（後年解析由来・別チャット照合予定）" },
     ],
     "IIB": [
-      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:81, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III）" },
-      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:72, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%" },
-      { label:"pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 92.2%" },
+      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:81, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III）★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:72, type:"trial", source:"KEYNOTE-522 プラセボ群 5y EFS 72.3%★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
+      { label:"pCR達成（ペムブロリズマブ追加）", pfs:92, type:"trial", source:"KEYNOTE-522 pCR群 92.2%｜【E】pCR例EFS HR 0.73（95%CI 0.39–1.36）＝Schmid NEJM 2022原著（事前規定・非無作為化・探索的・pCR〔ベースライン後変数〕で層別／CIが1をまたぎ効果確定不可＝数値バー化しない文字注記）｜表示%は★未照合（後年解析由来・別チャット照合予定）" },
       { label:"non-pCR→カペシタビン（CREATE-X）", pfs:70, type:"trial", source:"CREATE-X 5y DFS 69.8%" },
       { label:"non-pCR→無追加", pfs:56, type:"trial", source:"CREATE-X 観察群 56.1%" },
     ],
     "IIIA": [
-      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:79, type:"est", source:"KEYNOTE-522 81.3%基準（Stage IIを中心、IIIAで若干低下推定）" },
-      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:70, type:"est", source:"KEYNOTE-522 72.3%基準 Stage IIIAへ調整" },
+      { label:"術前化学療法＋ペムブロリズマブ（KEYNOTE-522全体）", pfs:79, type:"est", source:"KEYNOTE-522 81.3%基準（Stage IIを中心、IIIAで若干低下推定）★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
+      { label:"術前化学療法のみ（KEYNOTE-522 対照）", pfs:70, type:"est", source:"KEYNOTE-522 72.3%基準 Stage IIIAへ調整★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
     ],
     "IIIB": [
-      { label:"術前化学療法＋ペムブロリズマブ", pfs:69, type:"est", source:"KEYNOTE-522 Stage IIIB調整推定" },
+      { label:"術前化学療法＋ペムブロリズマブ", pfs:69, type:"est", source:"KEYNOTE-522 Stage IIIB調整推定★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
       { label:"術前化学療法のみ", pfs:59, type:"est", source:"Stage IIIB標準化学療法推定" },
     ],
     "IIIC": [
-      { label:"術前化学療法＋ペムブロリズマブ", pfs:60, type:"est", source:"KEYNOTE-522 Stage IIIC調整推定" },
+      { label:"術前化学療法＋ペムブロリズマブ", pfs:60, type:"est", source:"KEYNOTE-522 Stage IIIC調整推定★未照合：表示%（5年EFS）は後年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
       { label:"術前化学療法のみ", pfs:50, type:"est", source:"Stage IIIC標準化学療法推定" },
     ],
   },
@@ -692,6 +694,24 @@ function isOncotypeDxEligible(subtype, n, grade, ki67) {
 //    false 側へ倒すと etEsc が落ち、Ki-67低値枝で「化学療法省略」の文言が出うる＝危険側。
 //    ゆえにホワイトリストではなくブラックリスト（!== "IIIC"）で書く。
 function isPotentStageEligible(anat) { return anat !== "IIIC"; }
+
+// ══ §0-11【v2.1.38】KEYNOTE-522適格病期ゲート＝Stage I（IA/IB）除外（IwaoK決裁 2026-07-27）══
+//  ★発端：TNBC の Stage IA に術前ペムブロ（KEYNOTE-522）が出ていた＝適格外への按分（教訓36）。
+//    治療方針層（getTreatment TNBC枝）・スケジュール層（buildSchedule 術前TNBC枝）・予後層（PFS_DATA["TNBC"]["IA"]）の
+//    3層すべてに病期ゲートが無かった。原著（Schmid P, et al. NEJM 2022;386:556-67・Claude現物照合 2026-07-26）の
+//    適格集団は Stage II–III ＝ T1c N1–2 または T2–4 N0–2。★T1c N0 も N1–2 を要し適格外＝Stage I（IA/IB）は丸ごと対象外。
+//  ★POTENT（§0-8）と同じ「単一述語・両層（＋予後層）が同じものを参照」の思想。ただし【倒し方向は逆】：
+//    POTENT は未知 anat→true（S-1記載）が安全側だった（false だと Ki-67低値枝で「化学療法省略」文言が出る危険側）。
+//    KEYNOTE-522 が塞ぐのは「ペムブロという強い上乗せ」であり、TNBC は Ki-67低値枝を持たない（subtype排他）。
+//    ゆえに未知 anat を適格側へ倒すと「適格外への按分」を再生産する＝こちらでは true が危険側。
+//    よって未知→false＝【ホワイトリスト】で書く（POTENT のブラックリストと非対称なのは、危険側が逆だから）。
+//  ★残差（IwaoK決裁②・正直な記録 2026-07-27）：病期群ゲートゆえ T1a/T1b N1（Stage IIA だが原著は N1–2 で
+//    T1c 以上を要求）が適格側に残る。原著厳密には適格外だが、アプリの粒度（anat 病期群）では拾えない稀な隅。
+//    POTENT の粒度と同じ限界＝§7「照合キーの無い隅」を可視化として記録する。
+//  ★病期は【解剖学的】anat を見る（getPrognostic 補正後ではない）。getTreatment / buildSchedule とも anat を受け取る。
+//    予後層 PFS_DATA は静的データゆえ述語を通せない＝IA の KEYNOTE-522 行を【不在】で表現（POTENT の予後層と同型）。
+//    将来 audit.js に AU-7「IA の PFS_DATA に KEYNOTE-522 ラベルが存在しないこと」を追加候補（【O】point1・要audit.js現物）。
+function isKeynote522StageEligible(anat) { return ["IIA","IIB","IIIA","IIIB","IIIC"].includes(anat); }
 
 // 返り値: {kind:"eligible"|"lvi"|"neoadj"|"none", caveat?:string}
 function potentN0Eligibility(t, grade, ki67, primaryTx) {
@@ -1204,11 +1224,29 @@ function getTreatment(anat, subtype, ki67, n, t, grade, menopause, surgery, onco
   }
 
   if (subtype === "TNBC") {
-    const items = ["術前：ペムブロリズマブ（キイトルーダ）＋ アンスラサイクリン＋タキサン（KEYNOTE-522）","術後：ペムブロリズマブ継続（1年）","術前でpCR未達の場合 → カペシタビン追加を考慮"];
-    // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。TNBC術後=pT2以上orpN1以上／術前=non-pCR。カペシタビンとは併用不可（択一）。
-    const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n);
-    if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
-    pushBlock(res, { cat:"化学療法 ＋ 免疫療法", escalates:true, items });
+    // 【v2.1.38・IwaoK決裁 2026-07-27・決裁①(A)】KEYNOTE-522 適格病期ゲート（Stage II–III のみ／Stage I 除外）。
+    //   ★M1（isAdv）は上流で早期 return 済＝ここは M0 TNBC のみ（anat ∈ IA/IB/IIA/IIB/IIIA/IIIB/IIIC）。
+    if (isKeynote522StageEligible(anat)) {
+      const items = ["術前：ペムブロリズマブ（キイトルーダ）＋ アンスラサイクリン＋タキサン（KEYNOTE-522）","術後：ペムブロリズマブ継続（1年）","術前でpCR未達の場合 → カペシタビン追加を考慮"];
+      // 【v2.1.3】オラパリブ: OlympiA(JOHBOC CQ8)適応に厳密化。TNBC術後=pT2以上orpN1以上／術前=non-pCR。カペシタビンとは併用不可（択一）。
+      const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n);
+      if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
+      pushBlock(res, { cat:"化学療法 ＋ 免疫療法", escalates:true, items });
+    } else {
+      // 【v2.1.38・決裁①(A)】Stage I（IA/IB）は KEYNOTE-522 適格範囲外。
+      //   ★POTENT の IIIC は isHighRisk 経由で化学療法ブロックが残ったが、M0 TNBC の全身療法ブロックは
+      //     この1個だけ＝単純沈黙は Stage I TNBC の全身療法提示ごと消す。ゆえに Stage I 用の全身療法枠へ差し替え
+      //     （空白を作らない）＋ KEYNOTE-522 の明示的沈黙注記を1本（＝出さないと決めた事実と理由を残す・POTENT同型）。
+      //   ★免疫療法（ペムブロ）は無いので cat は「化学療法」（"＋ 免疫療法" を付けない＝出典偽装の回避）。
+      const items = [
+        "術後補助化学療法（TC または AC→T）：T1cN0 では標準的に考慮（ただし特殊組織型では推奨されない場合があります）",
+        "T1a・T1bN0（腫瘍径 ≤1cm・リンパ節転移なし）：術後補助化学療法は推奨されません",
+        "KEYNOTE-522（術前ペムブロリズマブ）は Stage II–III（T1c N1–2 または T2–4 N0–2）が適格範囲であり、本症例（Stage I）は適格範囲外のため記載しません"
+      ];
+      const olaEligTN = olaparibEligibility(subtype, primaryTx, t, n);
+      if (olaEligTN) items.push(`オラパリブ（リムパーザ）1年：gBRCA1/2変異陽性・${olaEligTN.cond}の例（OlympiA試験）※ BRCA検査が必要／カペシタビンとは併用不可・どちらか一方を選択`);
+      pushBlock(res, { cat:"化学療法", escalates:true, items });
+    }
   }
 
   return finalize(res);
@@ -1221,6 +1259,7 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   const isHER2     = subtype === "HER2+" || subtype === "HR+/HER2+";
   const isHR       = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
   const isTNBC     = subtype === "TNBC";
+  const isK522Elig = isKeynote522StageEligible(anat);   // 【v2.1.38】Stage II–III のみ true（Stage I 除外・getTreatment と同一述語）
   const isLuminal  = subtype === "HR+/HER2-" || subtype === "HR+/HER2+";
   const hasSLNB    = lymphNode === "センチネル生検" || lymphNode === "両方";
   const isBreastCon = surgery === "温存";
@@ -1324,9 +1363,15 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     if (isHER2) {
       rows.push({ phase:"術前化学療法", period:"第1〜12週", content:"パクリタキセル（3週毎）\n＋ペルツズマブ（パージェタ）\n＋トラスツズマブ（ハーセプチン）", color:"#e8f0fb" });
       rows.push({ phase:"術前化学療法", period:"第13〜24週", content:"EC療法（エピルビシン＋シクロホスファミド）\n※抗HER2療法は休止", color:"#e8f0fb" });
-    } else if (isTNBC) {
+    } else if (isTNBC && isK522Elig) {
       rows.push({ phase:"術前化学療法", period:"第1〜12週", content:"パクリタキセル（3週毎）\n＋ペムブロリズマブ（キイトルーダ）", color:"#e8f0fb" });
       rows.push({ phase:"術前化学療法", period:"第13〜24週", content:"EC療法（エピルビシン＋シクロホスファミド）\n＋ペムブロリズマブ", color:"#e8f0fb" });
+    } else if (isTNBC) {
+      // 【v2.1.38・決裁①(A)】Stage I（IA/IB）TNBC で術前化学療法を選んだ場合＝KEYNOTE-522 適格範囲外。
+      //   ペムブロを併用しない標準的な術前化学療法（EC→T）を提示し、沈黙の理由を1行残す（getTreatment と対称・層間非対称の回避）。
+      rows.push({ phase:"術前化学療法", period:"第1〜12週", content:"パクリタキセル（3週毎）", color:"#e8f0fb" });
+      rows.push({ phase:"術前化学療法", period:"第13〜24週", content:"EC療法（エピルビシン＋シクロホスファミド）", color:"#e8f0fb" });
+      rows.push({ phase:"※注記", period:"—", content:"KEYNOTE-522（ペムブロリズマブ併用）は Stage II–III が適格範囲のため、本症例（Stage I）では併用しません", color:"#fff8e1" });
     } else {
       rows.push({ phase:"術前化学療法", period:"第1〜24週", content:"担当医と相談の上、最適なレジメンを決定", color:"#e8f0fb" });
     }
@@ -1334,9 +1379,14 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
     if (isHER2) {
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"トラスツズマブ継続（合計1年完了まで）", color:"#e8f7ee" });
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"T-DM1（カドサイラ）14サイクル（KATHERINE試験）", color:"#fdeaea" });
-    } else if (isTNBC) {
+    } else if (isTNBC && isK522Elig) {
       rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"ペムブロリズマブ継続（術前分と合計1年）", color:"#e8f7ee" });
       rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）\n＋ペムブロリズマブ継続" + olaAdd, color:"#fdeaea" });
+    } else if (isTNBC) {
+      // 【v2.1.38・決裁①(A)】Stage I（IA/IB）TNBC＝KEYNOTE-522 適格範囲外＝ペムブロ継続なし。
+      //   pCR達成は術後経過観察、non-pCR はカペシタビン（CREATE-X）。olaAdd は gBRCA+ 時のみ付与（挙動不変）。
+      rows.push({ phase:"術後療法", period:"術後（pCR達成）", content:"術後は経過観察（追加の薬物療法は行いません）", color:"#e8f7ee" });
+      rows.push({ phase:"術後療法", period:"術後（pCR未達成）", content:"カペシタビン（8サイクル）（CREATE-X）" + olaAdd, color:"#fdeaea" });
     }
     if (isHR) rows.push({ phase:"内分泌療法", period:"術後〜5〜10年", content:etAdjContent + abemaAdd + s1Add + olaAdd, color:"#f3e8fb" });
     if (isBreastCon) rows.push({ phase:"放射線療法", period:"術後（適応時）", content:"温存術後：全乳房照射", color:"#fff8e1" });
@@ -1812,7 +1862,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.37";  // 【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.38";  // 【v2.1.38】KEYNOTE-522適格病期ゲート（Stage I=IA/IB除外）を3層に実装＝原則割れ是正（IwaoK決裁 2026-07-27）。原著Schmid NEJM 2022;386:556-67照合。①治療方針層(getTreatment TNBC枝)：Stage IIーIIIはペムブロ不変／Stage Iは非ペムブロの術後補助化学療法(TC/ACT・T1cN0考慮・T1abN0非推奨)＋明示的沈黙注記(決裁①A)。②スケジュール層(buildSchedule 術前TNBC枝)：Stage Iを非ペムブロ標準(EC→T)＋注記に分岐＝層間非対称の回避。③予後層(PFS_DATA TNBC IA)：KEYNOTE-522按分行(pCR92%・est)を削除し不在で表現(POTENT予後層と同型)＝est 86→85。単一述語isKeynote522StageEligible(anat)を新設(未知→false＝ホワイトリスト。POTENTと倒し方向が逆＝危険側が逆だから・§0-11)。残差：T1abN1がStage IIA適格側に残るが原著厳密には適格外と明記(決裁②)。【E】pCR/non-pCR EFS：2022原著のHR(pCR 0.73[0.39-1.36]／non-pCR 0.70[0.52-0.95]・探索的・postbaseline層別)を文字注記で追加(数値バー化しない)。先在%(81.3/72.3等・後年5年解析由来)は★未照合タグ＝別チャットで照合予定(決裁③)。挙動：Stage IIーIII(TNBC)は不変／変わるのはStage I(IA/IB) TNBCのみ／【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
