@@ -251,10 +251,16 @@ const PFS_DATA = {
   },
   "TNBC": {
     "IA": [
-      { label:"手術 ＋ 化学療法（EC→T）", pfs:89, type:"est", source:"SEER統計 Stage I TNBC参照" },
-      // 【v2.1.38・IwaoK決裁 2026-07-27】KEYNOTE-522 は Stage II–III の試験＝Stage I（IA）は適格外。
-      //   旧行（術前ペムブロ→pCR 92% を Stage II-III から按分・type:est）を削除し【不在】で表現（POTENT の予後層と同型）。
-      //   ★理由を残す（教訓8：誰も決めていない沈黙と区別するため）。治療層の明示的沈黙注記は getTreatment 側に一本化。
+      // 【v2.1.39・Request2・IwaoK決裁 2026-07-27】Stage I（T1N0）TNBC「手術単独 vs 手術→標準化学療法」比較（推定5年RFS）。
+      //   出典：T1N0M0 TNBC 後ろ向きコホート（Fudan Shanghai・n=354・The Breast 2018）＝同一コホート・同一指標(RFS)・両群隣接
+      //     （「一つの主張＝一つの出典・隣接」規律を満たす。5年推定RFS：化学療法なし 83.6% ／ あり 94.5%）。
+      //   ★大規模SEER(n=3,214)裏取り：上乗せ効果は T1c で有意(5y BCSS 94.5% vs 89.9%)・T1a/b は有意差なし
+      //     ＝治療層 prose（T1cN0 考慮／T1a・T1bN0 非推奨）と整合。
+      //   ★type:est＝推定値（後ろ向き観察）。est の「一次資料未確認」注記は保持（RCT 級ではない＝担当医確認の喚起は妥当）。
+      //   ★旧 SEER 89% 単行は本比較行へ統合（同一出典で両群を隣接・比較可能に）。
+      { label:"手術単独（術後化学療法なし）", pfs:84, type:"est", source:"T1N0M0 TNBC 後ろ向きコホート 5年RFS 83.6%（化学療法なし・Fudan Shanghai, The Breast 2018, n=354）" },
+      { label:"手術 → 標準化学療法（アンスラサイクリン系）", pfs:95, type:"est", source:"同コホート 5年RFS 94.5%（化学療法あり・Fudan Shanghai, The Breast 2018）" },
+      // 【v2.1.38】KEYNOTE-522 按分行（術前ペムブロ→pCR 92%・est）は削除済（Stage I は適格外・POTENT 予後層と同型・不在で表現）。
     ],
     "IIA": [
       { label:"術前化学療法＋ペムブロリズマブ→手術→継続（KEYNOTE-522全体）", pfs:83, type:"trial", source:"KEYNOTE-522 5y EFS 81.3%（Stage II-III全体）★未照合：81.3%は後年5年解析由来・手元2022原著(Schmid NEJM 2022)は36か月EFS 84.5% vs 76.8%＝別チャットで5年解析論文を入手し照合予定（【H】領域）" },
@@ -1393,7 +1399,10 @@ function buildSchedule(primaryTx, subtype, surgery, lymphNode, menopause, anat, 
   } else {
     rows.push({ phase:"手術", period:"初回", content:`${surgery ?? "乳房手術"}${hasSLNB ? "\n＋センチネルリンパ節生検" : ""}${lymphNode === "腋窩郭清" || lymphNode === "両方" ? "\n＋腋窩リンパ節郭清（適応時）" : ""}`, color:"#fef3e2" });
     if (subtype !== "HR+/HER2-") {
-      rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : isTNBC ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" + olaAdd : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
+      // 【v2.1.39・Request3(IwaoK 2026-07-27)】手術先行（術後化学療法）枝。TNBC の Stage I は pCR 概念が存在しない
+      //   （術前療法なし）ため「pCR未達相当時：カペシタビン追加」を除去。Stage II–III（isK522Elig）は不変。
+      //   ★残差：Stage II–III の手術先行 TNBC でも pCR は未発生ゆえ本注記は厳密には不整合＝将来決裁（本版は「Stage II–III 不変」原則を優先）。
+      rows.push({ phase:"術後化学療法", period:"術後4〜6週〜 約半年", content: isHER2 ? "EC療法→パクリタキセル＋トラスツズマブ（＋ペルツズマブ）\nトラスツズマブ合計1年" : (isTNBC && isK522Elig) ? "EC療法→パクリタキセル\npCR未達相当時：カペシタビン追加" + olaAdd : isTNBC ? "EC療法→パクリタキセル（TC も選択肢）" + olaAdd : "EC療法→パクリタキセル（適応例）", color:"#e8f0fb" });
     } else {
       rows.push({ phase:"術後化学療法", period:"術後（適応時）", content:"Ki-67・Oncotype DXスコア等により判断\n高リスク：EC→パクリタキセル", color:"#e8f0fb" });
     }
@@ -1831,13 +1840,24 @@ function App() {
   const allTNM     = activeT && activeN && selM;
   const showProgNote  = allTNM && anat !== "invalid" && anat !== "0" && anat !== "IV" && prog && prog !== anat;
   const biomarkersComplete = anat === "0" ? true : (er !== null && her2 !== null && grade !== null);   // DCIS(0)はバイオマーカー入力の有無に関わらず治療方針以下を表示（v2.1.0）
-  const showNeoAdj    = subtype === "TNBC" || subtype === "HER2+" || subtype === "HR+/HER2+";
+  // 【v2.1.39・Request1(IwaoK 2026-07-27)】Stage I TNBC（IA/IB）は術前化学療法が非標準＝ボタン非表示。
+  //   述語は getTreatment/buildSchedule と同一の isKeynote522StageEligible（教訓16：一述語を全層に通す）。HER2+系は不変。
+  const showNeoAdj    = subtype === "HER2+" || subtype === "HR+/HER2+" || (subtype === "TNBC" && isKeynote522StageEligible(anat));
   const showNeoAdjHR  = subtype === "HR+/HER2-" && ["T2","T3","T4"].includes(activeT);
   const isM1 = selM === "M1";
 
   useEffect(() => {
     if (isM1) { setSurgery("非手術（薬物療法）"); setLymphNode(null); setPrimaryTx(null); }
   }, [isM1]);
+
+  // 【v2.1.39・Request1(IwaoK 2026-07-27)】Stage I TNBC でボタン非表示化後、既選択の「術前化学療法」が残ると
+  //   buildSchedule の isNeoAdj 枝を幽霊駆動する（層間非対称）。適格外に転じた瞬間に primaryTx を解除して整合させる。
+  //   ★anat が確定（invalid/未確定でない）かつ Stage I のときのみ発火＝入力途中の誤リセットを防ぐ。
+  useEffect(() => {
+    if (subtype === "TNBC" && anat && anat !== "invalid" && !isKeynote522StageEligible(anat) && primaryTx === "術前化学療法") {
+      setPrimaryTx(null);
+    }
+  }, [subtype, anat, primaryTx]);
 
   function handleReset() {
     setPatientName(""); setAge(""); setMenopause(null); setSurgery(null);
@@ -1862,7 +1882,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.1.38";  // 【v2.1.38】KEYNOTE-522適格病期ゲート（Stage I=IA/IB除外）を3層に実装＝原則割れ是正（IwaoK決裁 2026-07-27）。原著Schmid NEJM 2022;386:556-67照合。①治療方針層(getTreatment TNBC枝)：Stage IIーIIIはペムブロ不変／Stage Iは非ペムブロの術後補助化学療法(TC/ACT・T1cN0考慮・T1abN0非推奨)＋明示的沈黙注記(決裁①A)。②スケジュール層(buildSchedule 術前TNBC枝)：Stage Iを非ペムブロ標準(EC→T)＋注記に分岐＝層間非対称の回避。③予後層(PFS_DATA TNBC IA)：KEYNOTE-522按分行(pCR92%・est)を削除し不在で表現(POTENT予後層と同型)＝est 86→85。単一述語isKeynote522StageEligible(anat)を新設(未知→false＝ホワイトリスト。POTENTと倒し方向が逆＝危険側が逆だから・§0-11)。残差：T1abN1がStage IIA適格側に残るが原著厳密には適格外と明記(決裁②)。【E】pCR/non-pCR EFS：2022原著のHR(pCR 0.73[0.39-1.36]／non-pCR 0.70[0.52-0.95]・探索的・postbaseline層別)を文字注記で追加(数値バー化しない)。先在%(81.3/72.3等・後年5年解析由来)は★未照合タグ＝別チャットで照合予定(決裁③)。挙動：Stage IIーIII(TNBC)は不変／変わるのはStage I(IA/IB) TNBCのみ／【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.1.39";  // 【v2.1.39】Stage I TNBC 三点整合（IwaoK決裁 2026-07-27）。①Request1：術前化学療法ボタンを Stage I TNBC（IA/IB）で非表示（showNeoAdj に isKeynote522StageEligible を通す＝getTreatment/buildSchedule と同一述語・教訓16）＋既選択時は primaryTx を解除する useEffect（幽霊枝防止・層間整合）。②Request2：予後層 PFS_DATA.TNBC.IA を「手術単独 vs 手術→標準化学療法」2行比較へ（推定5年RFS 83.6%／94.5%・出典 T1N0M0 TNBC 後ろ向きコホート Fudan Shanghai The Breast 2018 n=354＝同一コホート同一指標で比較可能。SEER n=3,214 で上乗せは T1c 有意・T1a/b 有意差なしを裏取り＝治療層 prose と整合）。旧 SEER89% 単行を統合＝est 85→86（audit.js 期待値要更新）。③Request3：手術先行スケジュールの TNBC で Stage I の「pCR未達相当時：カペシタビン追加」を除去（pCR は術前概念＝手術先行では非発生。Stage II–III は不変＝原則優先、同不整合は将来決裁）。挙動が変わるのは Stage I（IA/IB）TNBC のみ／【v2.1.38】KEYNOTE-522適格病期ゲート（Stage I=IA/IB除外）を3層に実装＝原則割れ是正（IwaoK決裁 2026-07-27）。原著Schmid NEJM 2022;386:556-67照合。①治療方針層(getTreatment TNBC枝)：Stage IIーIIIはペムブロ不変／Stage Iは非ペムブロの術後補助化学療法(TC/ACT・T1cN0考慮・T1abN0非推奨)＋明示的沈黙注記(決裁①A)。②スケジュール層(buildSchedule 術前TNBC枝)：Stage Iを非ペムブロ標準(EC→T)＋注記に分岐＝層間非対称の回避。③予後層(PFS_DATA TNBC IA)：KEYNOTE-522按分行(pCR92%・est)を削除し不在で表現(POTENT予後層と同型)＝est 86→85。単一述語isKeynote522StageEligible(anat)を新設(未知→false＝ホワイトリスト。POTENTと倒し方向が逆＝危険側が逆だから・§0-11)。残差：T1abN1がStage IIA適格側に残るが原著厳密には適格外と明記(決裁②)。【E】pCR/non-pCR EFS：2022原著のHR(pCR 0.73[0.39-1.36]／non-pCR 0.70[0.52-0.95]・探索的・postbaseline層別)を文字注記で追加(数値バー化しない)。先在%(81.3/72.3等・後年5年解析由来)は★未照合タグ＝別チャットで照合予定(決裁③)。挙動：Stage IIーIII(TNBC)は不変／変わるのはStage I(IA/IB) TNBCのみ／【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
