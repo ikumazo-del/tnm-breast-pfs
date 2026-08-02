@@ -13,6 +13,29 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- ══ ①DL数カウンタ（謎の数字）用 Firebase compat・inuyama-chat プロジェクト相乗り／counters/global のみ・PHIゼロ ══
+     ★type="module"不可（本体はbabelブロック）ゆえ compat版UMDを採用。初期化失敗時は window._fs=null で全機能を黙ってスキップ（本業＝保存を絶対に壊さない）。 -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+(function () {
+  try {
+    // ★★★ ここに inuyama-chat の Firebase 構成を貼る（Firebaseコンソール→⚙️プロジェクトの設定→マイアプリ→SDK設定と構成→「構成」）★★★
+    var firebaseConfig = {
+      apiKey: "AIzaSyAUVZoqxo-Qmsf6wKNT4eEM14ONvqRVz7I",
+      authDomain: "inuyama-chat.firebaseapp.com",
+      projectId: "inuyama-chat",
+      storageBucket: "inuyama-chat.firebasestorage.app",
+      messagingSenderId: "477126215293",
+      appId: "1:477126215293:web:25c07aee52104596625314"
+    };
+    firebase.initializeApp(firebaseConfig);
+    window._fs = firebase.firestore();
+  } catch (e) {
+    window._fs = null;  // 未設定・オフライン・読込失敗いずれも黙って無効化
+  }
+})();
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:#f0f2f5;font-family:'Hiragino Sans','Yu Gothic UI','Noto Sans JP',sans-serif;}
@@ -31,6 +54,18 @@ input[type=text]:focus,input[type=number]:focus{border-color:#1a5fa8!important;o
 <div id="root"></div>
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
+
+// ══ ①DL数カウンタ increment（謎の数字）══
+//   保存が実際に発生した時だけ +1。await しない＝Firestore書込がオフライン等で詰まっても
+//   保存（a.click）を人質に取らせない。increment はサーバ側アトミックゆえトランザクション不要。
+function bumpDL() {
+  try {
+    if (!window._fs) return;  // 未初期化なら黙って無視
+    window._fs.doc("counters/global")
+      .set({ dl: firebase.firestore.FieldValue.increment(1) }, { merge: true })
+      .catch(function () {});  // 書込失敗も握り潰す（本業＝保存を壊さない）
+  } catch (e) { /* no-op */ }
+}
 
 // ── TNM data ──
 const T_ITEMS = ["T0","Tis","T1","T2","T3","T4"];
@@ -1877,6 +1912,23 @@ const CHIP_PAL     = { op:{bg:"#eef5fd",bd:"#c9ddf3",fg:"#1a5fa8"}, sx:{bg:"#fbf
 
 // ── Main App ──────────────────────────────────────────────────────────
 function App() {
+  // ══ ①DL数カウンタ（謎の数字）の購読。初期null＝空白。読めない/未接続/オフラインでもnullのまま＝ヘッダ無表示 ══
+  const [dlCount, setDlCount] = useState(null);
+  useEffect(() => {
+    if (!window._fs) return;
+    let unsub;
+    try {
+      unsub = window._fs.doc("counters/global").onSnapshot(
+        function (d) {
+          const v = d && d.exists ? d.data().dl : null;
+          setDlCount(typeof v === "number" ? v : null);
+        },
+        function () { /* 読取失敗も空白のまま（画面は無傷） */ }
+      );
+    } catch (e) { /* no-op */ }
+    return () => { try { unsub && unsub(); } catch (e) {} };
+  }, []);
+
   const [patientName, setPatientName] = useState("");
   const [age, setAge] = useState("");
   const [menopause, setMenopause] = useState(null);
@@ -1982,7 +2034,7 @@ function App() {
   //     （DOM由来の免責パネルの有無に依存しない）。
   //   ファイル名：TNM_ER…_日付 を .doc / .html で統一。患者氏名はファイル名に入れない（de-identified）／
   //     氏名は本文ヘッダにのみ載る（紹介状用途）＝「ファイル名は匿名・本文は記名」の分離。
-  const APP_VER = "v2.2.3";  // ★v2.2.3【案B・HER2+系non-pCR全面改良(その1)＝HR+/HER2+ 再按分・IwaoK決裁 2026-07-30】KATHERINE一次資料(Geyer NEJM 2025;392:249-57・NEJMoa2406070・Suppl Fig S1)のHR+サブ群7年iDFS直値(T-DM1 83.1%/トラスツズマブ継続 69.8%・iDFS HR 0.52[0.40-0.67])をIIB相当アンカーに置き、HR+/HER2+ non-pCR列(T-DM1/T継続)を全病期ShortHER按分で再構成。T-DM1列 IIA89→90/IIB84→83/IIIA82→75/IIIB71→69/IIIC59→61、T継続列 IIA80→82/IIB67→70/IIIA68→56/IIIB39→44/IIIC24→30。★狙い:(1)旧IIIA T継続68(ET推定由来の浮き)を一次基準で解消しT継続列を完全単調化(IIA82>IIB70>IIIA56>IIIB44>IIIC30)、(2)IIB T継続をHR+直値69.8で+3(スコープA相当を包含)、(3)IIIA T-DM1(ITT直置き82→按分75)の按分外れ是正。★案D(Table S4実測)整合検証済＝中位病期(ypN+ HR+実測 T-DM1 80.0/T継続 64.3)を案B値が跨ぐ・軽病期はHR+下駄が正方向・最重症域(IIIB/IIIC)のみ外挿で低め=将来【D】Inoperable実測で持ち上げ余地。値のみ変更で行数不変＝★型カウント不変(実データ行 est=94/trial=51)。★申し送りv53教訓50の計数法是正: 型カウントは実データ行(『{ label:』開始行)で数える＝grep生値(説明文中のtype:"est"文字列を含む)は過大。前v2.2.2コメントの「+3(92→95)」はgrep生値由来の誤記で実体は91→94、本v2.2.3は行数不変ゆえ est=94据え置き(audit.js期待値も est=94・要現物照合)。挙動変化は HR+/HER2+ Stage IIA〜IIIC の non-pCR予後表示のみ・ロジック核/フィルタ/手術先行行(HERA86/APHINITY89残置)は無改変。／v2.2.2【PFS_DATA補完・方式①・IwaoK決裁 2026-07-30】HR+/HER2+ の術前(ネオアジュバント)症例で、HR-/HER2+ と同じ治療別予後フルセット(pCR/non-pCR T-DM1/non-pCR T継続)が出るよう欠損行を補完。IIA に non-pCR T-DM1(89)＋T継続(80)の2本、IIB に non-pCR T継続(67)の1本を追加＝計3本(全 type:est)。値は方式①＝HER2+(HR-)の対応値を横展開(ET上乗せなし＝HR+はpCR率が低くET併用でもPFSが比較的劣るとのIwaoK臨床判断)。手術先行行(HERA86/APHINITY89)は歴史的経緯によりIwaoK決裁で残置(ゲート無し)。★型カウント: type:"est" +3（現物grep 92→95）・trial不変(51)＝audit.js期待値をest=95へ要更新(現物未アップ＝【Q】同棚)。※申し送りv52の「est91」は記録が現物-1の乖離＝現物優先(教訓40)。★既知残: IIB T継続67 が既存IIIA T継続68(ET推定由来)と1点逆転＝III期T継続列の算出方式不統一が顕在化(Stage IIスコープにつきIIIA据え置き・方式①をIIIA適用[68→52]で解消可)。挙動変化は HR+/HER2+ Stage IIA/IIB のみ・ロジック核/フィルタ/est-trial判定ロジックは無改変。／v2.2.1【出力改修・IwaoK決裁 2026-07-30】(1)HTML出力の冒頭を右寄せ作成日のみに簡素化。(2)Word出力を専用ビルダー buildWordDoc に刷新（B案）：入力ウィジェット類を一切載せず、上段（ヘッダ/Stage/TNM/臨床/バイオ/治療方向）を state から table/p で綺麗に生成。予後・スケジュールは #pfs-export/#sched-export のライブDOMを複製し単一ソース維持（ロジック非二重化・片肺回避）。予後は sanitizeForWord で flex解除＋.pfs-bar除去（数値・注記はテキストで残存＝情報欠落なし）。★ロジック核・PFS_DATA・型カウント（est91/trial51）・audit.js は無影響（出力層のみ）。／v2.2.0【UI再編・IwaoK決裁 2026-07-30】固定サマリーを独立stickyカードに統合（タイトル一行＋Stage＋TNMコード[T4d/N1/M1]＋臨床チップ）／患者氏名・年齢欄を廃止（state/export/reset参照は温存＝最小変更）／T4サブ選択時の説明行を追加しN・Mと対称化（片肺補修）／チップは表示専用の短縮写像（OncoDX低中高未・PST・SNB・SNB→郭清等）を経由し内部stateは非介入。★ロジック核（activeT/activeN/anat/getTreatment/PfsPanel/PFS_DATA）・型カウント（est91/trial51）・audit.js は無影響（表示層のみ）。／【v2.1.44・Pending【U】＋【H】・IwaoK決裁 2026-07-29】(1)【U】術前化学療法ボタンにT径ゲート（B案）：HER2+/HR+HER2+ は「真の低リスク」= T1a/T1b(≤10mm)×N0 のときだけボタン非表示＋明示的沈黙の注記。節陽性(N1–3)は径によらず表示／T1c(≥11mm)・T2–4も表示／mm未設定のT1×N0は安全側で非表示（微決定1=隠す）。注記は2文出し分け（径確定=理由説明／mm未設定=「T1c以上またはN+で出ます」をそれとなく・微決定2）。幽霊枝防止 useEffect を showNeoAdj 全般へ一般化＝旧v2.1.39のTNBC専用を置換（機能包含・退行なし・教訓16）。★T1a/b/c N0 は全て Stage IA＝anat経由で径を捕まえられず tumorSize(mm) 直読が必須（教訓45）。PFS_DATA不変・est91/trial51不変・audit.js無影響（表示ゲート＋UI注記のみ）。(2)【H】KEYNOTE-522 5年EFS を一次PDF照合＝Schmid NEJM 2024;391:1981-91（最終OS解析・MFU 75.1か月）：表示%を81.3/72.3→81.2/72.2 に是正・source を一次照合済へ更新・EFS HR 0.65(0.51–0.83) 明記。★旧 HR 0.63 は39.1か月(第4回中間)の値＝5年%(最終解析)に39か月HRを貼った版取り違えを是正（教訓44）。5年OS 86.6/81.7・OS HR 0.66(加重平均区分)は照合一致で変更なし。pCR/non-pCRサブ群EFS%(92.2/88.2/62.6/52.3)は本OS論文に記載なし＝★未照合を「本PDF範囲外」註記で保持（EFS専用後年解析が別途必要）。予後バー整数は0.1差では不変＝型カウント不変。全体EFS部分の【H】CLOSE。／【v2.1.43・Pending【S】最小案・IwaoK決裁 2026-07-29】getTreatment HER2+枝の KATHERINE言及行(katherineLine)を primaryTx でゲート＝層間非対称の是正。照合は二層構造（申し送りv49 §2）：一次=von Minckwitz NEJM 2019＝適格基準・サブグループ一貫性という"ロジック"の照合／表示値=Geyer NEJM 2025 7y 80.8%/67.1%＝"数値"の続報・Claude web照合済＝アプリ値正・修正不要（教訓44）。臨床ロジック：KATHERINE適格は残存浸潤癌(non-pCR)のみで定義されベースラインのリスクでは門番されない（原著Fig 2 サブグループ横断一貫・node-negでも92.8/84.6）＝katherineLine の帰属は isHighRisk でなく primaryTx。配線：高リスク枝は primaryTx==="手術"（手術先行）で削除＝手術先行は non-pCR 非発生（危険側の過剰記載除去・KEYNOTE-522是正と同型）／低リスク枝は primaryTx==="術前化学療法" で追加＝non-pCR 発生しうる（非危険側の是正・スケジュール層isNeoAdjゲートと対称）。デフォルト（未選択）挙動は保存（高リスク→表示／低リスク→非表示）。最小案の定義＝cat据え置き・APHINITY非追加・PFS_DATA不変・型カウント不変(est91/trial51)・audit.js影響なし。escalates は両枝 true 据え置き＝finalize/AU-6 の escalating 判定は katherineLine 非依存（v2.1.29でitems文字列照合撤去済＝コード側で無影響を裏取り）。フル案（高リスク×手術先行の cat を「術後補助」是正＋APHINITY明示・新cat＝audit要更新）は不採択・記録のみ。／【v2.1.42・Pending【T】確定・IwaoK決裁 2026-07-29】手術先行TNBC(Stage II–III)予後層の片肺是正＝治療方針層(v2.1.41 primaryTx==="手術"分岐)に予後層を追随させ層間対称化（教訓42）。PFS_DATA["TNBC"] IIA/IIB/IIIA/IIIB/IIIC に「手術＋術後補助化学療法(EC→パクリタキセル)」推定5年OS行を各1本追加（76/72/66/58/50・全 type:est・req:{surgeryFirst:true}でprimaryTx==="手術"時のみ表示＝S-1のreq.nPlusと同型ゲート・PfsPanel filter拡張）。アンカー=SEER 2025 TNBC領域(regional)5年相対生存67.5%（BCRF 2026-02・Claude web検証済／限局92.4・遠隔14.9）｜勾配=KEYNOTE-522病期構造＋既存TNBC病期勾配借用｜★指標=OS(相対生存)＝他行のEFS/DFS/pCR層別と直接比較不可（指標混在明示・カタログ思想）｜★交絡=選択バイアス双方向＝『手術先行の効果』と読ませない｜SEER領域≠AJCC｜将来PFS/RFS直接データで差替。KEYNOTE-522値もClaude web再検証（5y EFS 81.3/72.3・HR0.63＝AACR2024更新、5y OS 86.6/81.7・HR0.66＝ESMO2024、7y EFS 78.3/69.8＝ASCO2026／原著Schmid NEJM 2022は36か月値＝【H】未照合タグ不変）。型カウント: PFS_DATA est +5（86→91）・trial不変（51）＝★audit.js期待値をest=91へ要更新（現物未アップ＝【Q】同棚・教訓40）。挙動変化は TNBC Stage II–III で手術先行選択時のみ（新行が明表示・既存術前行は従来どおり薄表示の参考）。【S】KATHERINE層間非対称は本セッション未実装＝KATHERINE文献PDF未着＋精査により『両層は各々適切な別変数で駆動＝真の片肺か要再検討』のためIwaoK再決裁待ち（下記申し送りv49参照）。／【v2.1.41】手術先行TNBC(Stage II–III)治療方針層を primaryTx==="手術" で分岐＝術後補助(EC→パクリタキセル＋OlympiA・ペムブロ無)を提示しスケジュール層(術後化学療法行)と対称化＝層間非対称の是正（従来は病期ゲートのみで術前ペムブロを手術先行にも表示）。あわせてオラパリブ注記のカペシタビン併用不可を olaparibEligibility の ctx で出し分け（術前non-pCRのみ表示／手術先行ctx"術後"は非表示＝CREATE-X非該当）＝治療方針層2箇所(Stage II–III/Stage I)＋スケジュール層olaAddの3箇所。cat「化学療法（術後補助）」新設＝★audit.js catリスト・型カウント要確認（手術先行TNBC枝で KEYNOTE-522 trial が1件減）。挙動変化は TNBC Stage II–III で手術先行選択時のみ（IwaoK決裁 2026-07-28）／【v2.1.40】§16 整合監査の決裁2件（IwaoK決裁 2026-07-28）。①【R】手術先行TNBC（Stage II–III）の「pCR未達相当時：カペシタビン追加」を削除＝pCRは術前概念で手術先行では非発生・CREATE-X非該当（残差の将来決裁を確定）。②【死にコード】v2.1.39 Request1でボタン非表示化により到達不能化したStage I TNBC術前枝（EC→T＋注記）を痕跡的コメント化＝ボタン復活時の保険として教訓19の根拠付きで残置。挙動不変（削除・コメント化とも観察経路に影響なし・型カウント est86/trial51 不変）。★未着手：【Q】audit.js est85→86（現物未アップ）／【S】KATHERINE層間非対称（治療方針=isHighRiskゲート・スケジュール=無ゲート＝要決裁・向きはKEYNOTE-522と逆で非危険側）。／【v2.1.39】Stage I TNBC 三点整合（IwaoK決裁 2026-07-27）。①Request1：術前化学療法ボタンを Stage I TNBC（IA/IB）で非表示（showNeoAdj に isKeynote522StageEligible を通す＝getTreatment/buildSchedule と同一述語・教訓16）＋既選択時は primaryTx を解除する useEffect（幽霊枝防止・層間整合）。②Request2：予後層 PFS_DATA.TNBC.IA を「手術単独 vs 手術→標準化学療法」2行比較へ（推定5年RFS 83.6%／94.5%・出典 T1N0M0 TNBC 後ろ向きコホート Fudan Shanghai The Breast 2018 n=354＝同一コホート同一指標で比較可能。SEER n=3,214 で上乗せは T1c 有意・T1a/b 有意差なしを裏取り＝治療層 prose と整合）。旧 SEER89% 単行を統合＝est 85→86（audit.js 期待値要更新）。③Request3：手術先行スケジュールの TNBC で Stage I の「pCR未達相当時：カペシタビン追加」を除去（pCR は術前概念＝手術先行では非発生。Stage II–III は不変＝原則優先、同不整合は将来決裁）。挙動が変わるのは Stage I（IA/IB）TNBC のみ／【v2.1.38】KEYNOTE-522適格病期ゲート（Stage I=IA/IB除外）を3層に実装＝原則割れ是正（IwaoK決裁 2026-07-27）。原著Schmid NEJM 2022;386:556-67照合。①治療方針層(getTreatment TNBC枝)：Stage IIーIIIはペムブロ不変／Stage Iは非ペムブロの術後補助化学療法(TC/ACT・T1cN0考慮・T1abN0非推奨)＋明示的沈黙注記(決裁①A)。②スケジュール層(buildSchedule 術前TNBC枝)：Stage Iを非ペムブロ標準(EC→T)＋注記に分岐＝層間非対称の回避。③予後層(PFS_DATA TNBC IA)：KEYNOTE-522按分行(pCR92%・est)を削除し不在で表現(POTENT予後層と同型)＝est 86→85。単一述語isKeynote522StageEligible(anat)を新設(未知→false＝ホワイトリスト。POTENTと倒し方向が逆＝危険側が逆だから・§0-11)。残差：T1abN1がStage IIA適格側に残るが原著厳密には適格外と明記(決裁②)。【E】pCR/non-pCR EFS：2022原著のHR(pCR 0.73[0.39-1.36]／non-pCR 0.70[0.52-0.95]・探索的・postbaseline層別)を文字注記で追加(数値バー化しない)。先在%(81.3/72.3等・後年5年解析由来)は★未照合タグ＝別チャットで照合予定(決裁③)。挙動：Stage IIーIII(TNBC)は不変／変わるのはStage I(IA/IB) TNBCのみ／【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
+  const APP_VER = "v2.3.0";  // ★v2.3.0【学会公表フィードバック機構・IwaoK決裁 2026-08-02】臨床数値・ロジックは一切無改変（表示層/出力トリガのみ）。①DL数の謎の数字＝Firestore counters/global.dl を @IwaoK 右に中黒·＋極薄#c4ccd6 で表示（ラベルなし・strategic ambiguity・教訓54）／初回接続前・オフライン・読取失敗は空白（dlCount=null ガードで中黒ごと非表示）。bumpDL は exportHtml/exportWord の生成成功後（実際にDLする時のみ）に increment(1) を fire-and-forget＝await せず二重catchで握り潰し、保存を絶対に巻き込まない。Firebase は inuyama-chat 相乗り・compat版UMD（本体はbabelブロックゆえmodule不可）・初期化失敗時 window._fs=null で全機能を黙ってスキップ。③バグ報告＝Googleフォーム（既存「いいとこ探し」と同型・回答はGoogleがIwaoKへメール通知・PHIはフォーム側「※患者情報書かない」で封じ・アプリからメール送信もFirestore reports書込も行わない）。★型カウント不変（実データ行 est=94／trial=51）・PFS_DATA/フィルタ/手術先行行/audit.js 無影響。／★v2.2.3【案B・HER2+系non-pCR全面改良(その1)＝HR+/HER2+ 再按分・IwaoK決裁 2026-07-30】KATHERINE一次資料(Geyer NEJM 2025;392:249-57・NEJMoa2406070・Suppl Fig S1)のHR+サブ群7年iDFS直値(T-DM1 83.1%/トラスツズマブ継続 69.8%・iDFS HR 0.52[0.40-0.67])をIIB相当アンカーに置き、HR+/HER2+ non-pCR列(T-DM1/T継続)を全病期ShortHER按分で再構成。T-DM1列 IIA89→90/IIB84→83/IIIA82→75/IIIB71→69/IIIC59→61、T継続列 IIA80→82/IIB67→70/IIIA68→56/IIIB39→44/IIIC24→30。★狙い:(1)旧IIIA T継続68(ET推定由来の浮き)を一次基準で解消しT継続列を完全単調化(IIA82>IIB70>IIIA56>IIIB44>IIIC30)、(2)IIB T継続をHR+直値69.8で+3(スコープA相当を包含)、(3)IIIA T-DM1(ITT直置き82→按分75)の按分外れ是正。★案D(Table S4実測)整合検証済＝中位病期(ypN+ HR+実測 T-DM1 80.0/T継続 64.3)を案B値が跨ぐ・軽病期はHR+下駄が正方向・最重症域(IIIB/IIIC)のみ外挿で低め=将来【D】Inoperable実測で持ち上げ余地。値のみ変更で行数不変＝★型カウント不変(実データ行 est=94/trial=51)。★申し送りv53教訓50の計数法是正: 型カウントは実データ行(『{ label:』開始行)で数える＝grep生値(説明文中のtype:"est"文字列を含む)は過大。前v2.2.2コメントの「+3(92→95)」はgrep生値由来の誤記で実体は91→94、本v2.2.3は行数不変ゆえ est=94据え置き(audit.js期待値も est=94・要現物照合)。挙動変化は HR+/HER2+ Stage IIA〜IIIC の non-pCR予後表示のみ・ロジック核/フィルタ/手術先行行(HERA86/APHINITY89残置)は無改変。／v2.2.2【PFS_DATA補完・方式①・IwaoK決裁 2026-07-30】HR+/HER2+ の術前(ネオアジュバント)症例で、HR-/HER2+ と同じ治療別予後フルセット(pCR/non-pCR T-DM1/non-pCR T継続)が出るよう欠損行を補完。IIA に non-pCR T-DM1(89)＋T継続(80)の2本、IIB に non-pCR T継続(67)の1本を追加＝計3本(全 type:est)。値は方式①＝HER2+(HR-)の対応値を横展開(ET上乗せなし＝HR+はpCR率が低くET併用でもPFSが比較的劣るとのIwaoK臨床判断)。手術先行行(HERA86/APHINITY89)は歴史的経緯によりIwaoK決裁で残置(ゲート無し)。★型カウント: type:"est" +3（現物grep 92→95）・trial不変(51)＝audit.js期待値をest=95へ要更新(現物未アップ＝【Q】同棚)。※申し送りv52の「est91」は記録が現物-1の乖離＝現物優先(教訓40)。★既知残: IIB T継続67 が既存IIIA T継続68(ET推定由来)と1点逆転＝III期T継続列の算出方式不統一が顕在化(Stage IIスコープにつきIIIA据え置き・方式①をIIIA適用[68→52]で解消可)。挙動変化は HR+/HER2+ Stage IIA/IIB のみ・ロジック核/フィルタ/est-trial判定ロジックは無改変。／v2.2.1【出力改修・IwaoK決裁 2026-07-30】(1)HTML出力の冒頭を右寄せ作成日のみに簡素化。(2)Word出力を専用ビルダー buildWordDoc に刷新（B案）：入力ウィジェット類を一切載せず、上段（ヘッダ/Stage/TNM/臨床/バイオ/治療方向）を state から table/p で綺麗に生成。予後・スケジュールは #pfs-export/#sched-export のライブDOMを複製し単一ソース維持（ロジック非二重化・片肺回避）。予後は sanitizeForWord で flex解除＋.pfs-bar除去（数値・注記はテキストで残存＝情報欠落なし）。★ロジック核・PFS_DATA・型カウント（est91/trial51）・audit.js は無影響（出力層のみ）。／v2.2.0【UI再編・IwaoK決裁 2026-07-30】固定サマリーを独立stickyカードに統合（タイトル一行＋Stage＋TNMコード[T4d/N1/M1]＋臨床チップ）／患者氏名・年齢欄を廃止（state/export/reset参照は温存＝最小変更）／T4サブ選択時の説明行を追加しN・Mと対称化（片肺補修）／チップは表示専用の短縮写像（OncoDX低中高未・PST・SNB・SNB→郭清等）を経由し内部stateは非介入。★ロジック核（activeT/activeN/anat/getTreatment/PfsPanel/PFS_DATA）・型カウント（est91/trial51）・audit.js は無影響（表示層のみ）。／【v2.1.44・Pending【U】＋【H】・IwaoK決裁 2026-07-29】(1)【U】術前化学療法ボタンにT径ゲート（B案）：HER2+/HR+HER2+ は「真の低リスク」= T1a/T1b(≤10mm)×N0 のときだけボタン非表示＋明示的沈黙の注記。節陽性(N1–3)は径によらず表示／T1c(≥11mm)・T2–4も表示／mm未設定のT1×N0は安全側で非表示（微決定1=隠す）。注記は2文出し分け（径確定=理由説明／mm未設定=「T1c以上またはN+で出ます」をそれとなく・微決定2）。幽霊枝防止 useEffect を showNeoAdj 全般へ一般化＝旧v2.1.39のTNBC専用を置換（機能包含・退行なし・教訓16）。★T1a/b/c N0 は全て Stage IA＝anat経由で径を捕まえられず tumorSize(mm) 直読が必須（教訓45）。PFS_DATA不変・est91/trial51不変・audit.js無影響（表示ゲート＋UI注記のみ）。(2)【H】KEYNOTE-522 5年EFS を一次PDF照合＝Schmid NEJM 2024;391:1981-91（最終OS解析・MFU 75.1か月）：表示%を81.3/72.3→81.2/72.2 に是正・source を一次照合済へ更新・EFS HR 0.65(0.51–0.83) 明記。★旧 HR 0.63 は39.1か月(第4回中間)の値＝5年%(最終解析)に39か月HRを貼った版取り違えを是正（教訓44）。5年OS 86.6/81.7・OS HR 0.66(加重平均区分)は照合一致で変更なし。pCR/non-pCRサブ群EFS%(92.2/88.2/62.6/52.3)は本OS論文に記載なし＝★未照合を「本PDF範囲外」註記で保持（EFS専用後年解析が別途必要）。予後バー整数は0.1差では不変＝型カウント不変。全体EFS部分の【H】CLOSE。／【v2.1.43・Pending【S】最小案・IwaoK決裁 2026-07-29】getTreatment HER2+枝の KATHERINE言及行(katherineLine)を primaryTx でゲート＝層間非対称の是正。照合は二層構造（申し送りv49 §2）：一次=von Minckwitz NEJM 2019＝適格基準・サブグループ一貫性という"ロジック"の照合／表示値=Geyer NEJM 2025 7y 80.8%/67.1%＝"数値"の続報・Claude web照合済＝アプリ値正・修正不要（教訓44）。臨床ロジック：KATHERINE適格は残存浸潤癌(non-pCR)のみで定義されベースラインのリスクでは門番されない（原著Fig 2 サブグループ横断一貫・node-negでも92.8/84.6）＝katherineLine の帰属は isHighRisk でなく primaryTx。配線：高リスク枝は primaryTx==="手術"（手術先行）で削除＝手術先行は non-pCR 非発生（危険側の過剰記載除去・KEYNOTE-522是正と同型）／低リスク枝は primaryTx==="術前化学療法" で追加＝non-pCR 発生しうる（非危険側の是正・スケジュール層isNeoAdjゲートと対称）。デフォルト（未選択）挙動は保存（高リスク→表示／低リスク→非表示）。最小案の定義＝cat据え置き・APHINITY非追加・PFS_DATA不変・型カウント不変(est91/trial51)・audit.js影響なし。escalates は両枝 true 据え置き＝finalize/AU-6 の escalating 判定は katherineLine 非依存（v2.1.29でitems文字列照合撤去済＝コード側で無影響を裏取り）。フル案（高リスク×手術先行の cat を「術後補助」是正＋APHINITY明示・新cat＝audit要更新）は不採択・記録のみ。／【v2.1.42・Pending【T】確定・IwaoK決裁 2026-07-29】手術先行TNBC(Stage II–III)予後層の片肺是正＝治療方針層(v2.1.41 primaryTx==="手術"分岐)に予後層を追随させ層間対称化（教訓42）。PFS_DATA["TNBC"] IIA/IIB/IIIA/IIIB/IIIC に「手術＋術後補助化学療法(EC→パクリタキセル)」推定5年OS行を各1本追加（76/72/66/58/50・全 type:est・req:{surgeryFirst:true}でprimaryTx==="手術"時のみ表示＝S-1のreq.nPlusと同型ゲート・PfsPanel filter拡張）。アンカー=SEER 2025 TNBC領域(regional)5年相対生存67.5%（BCRF 2026-02・Claude web検証済／限局92.4・遠隔14.9）｜勾配=KEYNOTE-522病期構造＋既存TNBC病期勾配借用｜★指標=OS(相対生存)＝他行のEFS/DFS/pCR層別と直接比較不可（指標混在明示・カタログ思想）｜★交絡=選択バイアス双方向＝『手術先行の効果』と読ませない｜SEER領域≠AJCC｜将来PFS/RFS直接データで差替。KEYNOTE-522値もClaude web再検証（5y EFS 81.3/72.3・HR0.63＝AACR2024更新、5y OS 86.6/81.7・HR0.66＝ESMO2024、7y EFS 78.3/69.8＝ASCO2026／原著Schmid NEJM 2022は36か月値＝【H】未照合タグ不変）。型カウント: PFS_DATA est +5（86→91）・trial不変（51）＝★audit.js期待値をest=91へ要更新（現物未アップ＝【Q】同棚・教訓40）。挙動変化は TNBC Stage II–III で手術先行選択時のみ（新行が明表示・既存術前行は従来どおり薄表示の参考）。【S】KATHERINE層間非対称は本セッション未実装＝KATHERINE文献PDF未着＋精査により『両層は各々適切な別変数で駆動＝真の片肺か要再検討』のためIwaoK再決裁待ち（下記申し送りv49参照）。／【v2.1.41】手術先行TNBC(Stage II–III)治療方針層を primaryTx==="手術" で分岐＝術後補助(EC→パクリタキセル＋OlympiA・ペムブロ無)を提示しスケジュール層(術後化学療法行)と対称化＝層間非対称の是正（従来は病期ゲートのみで術前ペムブロを手術先行にも表示）。あわせてオラパリブ注記のカペシタビン併用不可を olaparibEligibility の ctx で出し分け（術前non-pCRのみ表示／手術先行ctx"術後"は非表示＝CREATE-X非該当）＝治療方針層2箇所(Stage II–III/Stage I)＋スケジュール層olaAddの3箇所。cat「化学療法（術後補助）」新設＝★audit.js catリスト・型カウント要確認（手術先行TNBC枝で KEYNOTE-522 trial が1件減）。挙動変化は TNBC Stage II–III で手術先行選択時のみ（IwaoK決裁 2026-07-28）／【v2.1.40】§16 整合監査の決裁2件（IwaoK決裁 2026-07-28）。①【R】手術先行TNBC（Stage II–III）の「pCR未達相当時：カペシタビン追加」を削除＝pCRは術前概念で手術先行では非発生・CREATE-X非該当（残差の将来決裁を確定）。②【死にコード】v2.1.39 Request1でボタン非表示化により到達不能化したStage I TNBC術前枝（EC→T＋注記）を痕跡的コメント化＝ボタン復活時の保険として教訓19の根拠付きで残置。挙動不変（削除・コメント化とも観察経路に影響なし・型カウント est86/trial51 不変）。★未着手：【Q】audit.js est85→86（現物未アップ）／【S】KATHERINE層間非対称（治療方針=isHighRiskゲート・スケジュール=無ゲート＝要決裁・向きはKEYNOTE-522と逆で非危険側）。／【v2.1.39】Stage I TNBC 三点整合（IwaoK決裁 2026-07-27）。①Request1：術前化学療法ボタンを Stage I TNBC（IA/IB）で非表示（showNeoAdj に isKeynote522StageEligible を通す＝getTreatment/buildSchedule と同一述語・教訓16）＋既選択時は primaryTx を解除する useEffect（幽霊枝防止・層間整合）。②Request2：予後層 PFS_DATA.TNBC.IA を「手術単独 vs 手術→標準化学療法」2行比較へ（推定5年RFS 83.6%／94.5%・出典 T1N0M0 TNBC 後ろ向きコホート Fudan Shanghai The Breast 2018 n=354＝同一コホート同一指標で比較可能。SEER n=3,214 で上乗せは T1c 有意・T1a/b 有意差なしを裏取り＝治療層 prose と整合）。旧 SEER89% 単行を統合＝est 85→86（audit.js 期待値要更新）。③Request3：手術先行スケジュールの TNBC で Stage I の「pCR未達相当時：カペシタビン追加」を除去（pCR は術前概念＝手術先行では非発生。Stage II–III は不変＝原則優先、同不整合は将来決裁）。挙動が変わるのは Stage I（IA/IB）TNBC のみ／【v2.1.38】KEYNOTE-522適格病期ゲート（Stage I=IA/IB除外）を3層に実装＝原則割れ是正（IwaoK決裁 2026-07-27）。原著Schmid NEJM 2022;386:556-67照合。①治療方針層(getTreatment TNBC枝)：Stage IIーIIIはペムブロ不変／Stage Iは非ペムブロの術後補助化学療法(TC/ACT・T1cN0考慮・T1abN0非推奨)＋明示的沈黙注記(決裁①A)。②スケジュール層(buildSchedule 術前TNBC枝)：Stage Iを非ペムブロ標準(EC→T)＋注記に分岐＝層間非対称の回避。③予後層(PFS_DATA TNBC IA)：KEYNOTE-522按分行(pCR92%・est)を削除し不在で表現(POTENT予後層と同型)＝est 86→85。単一述語isKeynote522StageEligible(anat)を新設(未知→false＝ホワイトリスト。POTENTと倒し方向が逆＝危険側が逆だから・§0-11)。残差：T1abN1がStage IIA適格側に残るが原著厳密には適格外と明記(決裁②)。【E】pCR/non-pCR EFS：2022原著のHR(pCR 0.73[0.39-1.36]／non-pCR 0.70[0.52-0.95]・探索的・postbaseline層別)を文字注記で追加(数値バー化しない)。先在%(81.3/72.3等・後年5年解析由来)は★未照合タグ＝別チャットで照合予定(決裁③)。挙動：Stage IIーIII(TNBC)は不変／変わるのはStage I(IA/IB) TNBCのみ／【v2.1.37】CFS（無化学療法生存期間）ラベル是正：MONARCH3_OS の source注記「化学療法開始までの期間」（TTC・死亡含まず）→「無化学療法生存期間（CFS・死亡含む）」へ。原著Endpoints＆Fig4照合（Goetz Ann Oncol 2024・IwaoK決裁 2026-07-26）。値・挙動は不変＝source注記のみ（v2.1.34と同型）／【v2.1.36】Ki67Slider UI微調整(表示のみ)：スライダー幅を短縮(flex:1→150px)・20%マーカーをつまみ実位置に合わせ22%へ・数値を中央寄せ(▶〜数値と数値〜クリアを均等)・未施行時は空欄表示("未施行"文字を削除。薄いスライダー＋治療欄の明示ブロックで状態を担保)／【v2.1.35】Ki-67 初期値を未施行(undefined)化＝Number(null)=0 の低値誤判定を回避。クリアボタン追加。未施行時は増殖能枠に軽アラート「Ki-67の数値入力によっては治療法のオプションが変わります」を表示（沈黙させない・教訓8）。Ki-67で動く治療は実測3ブロック（化学療法上乗せ/内分泌+補助/OncoDX）／【v2.1.34】DESTINY-Breast06 原著（Bardia NEJM 2024）PDF照合＝DB06_LOW/UL の★未確認2件を解消（PFSは主要評価項目の主解析／超低発現は事前規定の探索的解析）・P値表示を原著P<0.001に統一・ILD全体は原著＋適正使用ガイドの二重照合／日本人は適正使用ガイド一次資料と出典分離明示（IwaoK決裁 2026-07-25）／【v2.1.33】M0の「非手術（薬物療法）」を削除し「未決定」に集約＝v2.1.4判断の取り下げ（M1緩和枝の誤借用を是正・IwaoK決裁 2026-07-24）／【v2.1.32】finalize方式＝増殖能ブロックの位置依存を撤去（案C／K-b・IwaoK決裁 2026-07-24）／【v2.1.31】S-1／TS-1の層別統一（参考・予後・試験説明＝S-1／スケジュール＝TS-1・IwaoK決裁 2026-07-24）／【v2.1.30】POTENT適格病期ゲート＝IIIC除外＋明示的沈黙（層間の片肺是正・IwaoK決裁 2026-07-24）／【v2.1.29】escalating をフラグ構造化（薬剤名の文字列一致を撤去／未フラグ検出カナリア _escUnset 新設・IwaoK決裁 2026-07-23）。ヘッダ副題はAPP_VER連動（据え置き事故の構造的防止）
 
   function buildExportBasename() {
     const na = (v) => (v == null ? "na" : v);
@@ -2128,6 +2180,7 @@ function App() {
   function exportWord() {
     const inner = buildWordDoc();
     if (!inner) return;
+    bumpDL();  // ①実際にWordを生成＝DLする時のみ +1（fire-and-forget）
     const html =
       '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
       'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
@@ -2146,6 +2199,7 @@ function App() {
   function exportHtml() {
     const body = buildResultBody();
     if (!body) return;
+    bumpDL();  // ①実際にHTMLを生成＝DLする時のみ +1（fire-and-forget）
     const html =
       '<!DOCTYPE html><html lang="ja"><head><meta charset="utf-8">' +
       '<meta name="viewport" content="width=device-width, initial-scale=1">' +
@@ -2198,7 +2252,7 @@ function App() {
           {/* タイトル行（一行・固定・氏名年齢は廃止） */}
           <div style={{ display:"flex", alignItems:"baseline", gap:8, whiteSpace:"nowrap", overflow:"hidden", paddingBottom:7, marginBottom:8, borderBottom:"1px solid #eaeef3" }}>
             <span style={{ fontSize:13, fontWeight:800, color:"#222", overflow:"hidden", textOverflow:"ellipsis" }}>乳がん TNM分類・治療方針案</span>
-            <span style={{ marginLeft:"auto", fontSize:10.5, color:"#aab2bd", flexShrink:0 }}>{APP_VER.replace(/^v/, "ver")}　<span style={{ color:"#8a94a0", fontWeight:700 }}>@IwaoK</span></span>
+            <span style={{ marginLeft:"auto", fontSize:10.5, color:"#aab2bd", flexShrink:0 }}>{APP_VER.replace(/^v/, "ver")}　<span style={{ color:"#8a94a0", fontWeight:700 }}>@IwaoK</span>{dlCount!=null && <span style={{ color:"#c4ccd6", fontWeight:700 }}> · {dlCount}</span>}</span>
           </div>
 
           {/* Stage行 */}
@@ -2563,6 +2617,11 @@ function App() {
         <div style={{ marginTop:10, fontSize:10, color:"#bbb", textAlign:"center", lineHeight:1.8 }} className="no-print">
           解剖学的ステージ ＋ Prognostic Stage（AJCC 8th）<br/>
           Oncotype DX 等ゲノム検査による補正は含みません。
+        </div>
+        {/* ③バグ報告＝Googleフォーム（既存「いいとこ探し」と同型・回答はGoogleがIwaoKへメール通知／PHIはフォーム側の「※患者情報は書かないでください」で入口封じ） */}
+        <div style={{ marginTop:6, textAlign:"center" }} className="no-print">
+          <a href="https://forms.gle/U3gcrq3UQAvKWqc97" target="_blank" rel="noopener"
+             style={{ fontSize:11, color:"#aab2bd", textDecoration:"none" }}>ご意見・不具合の報告</a>
         </div>
       </div>
     </div>
